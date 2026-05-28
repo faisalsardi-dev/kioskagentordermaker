@@ -165,7 +165,11 @@ def add_mccafe(order: Order, menu: Menu, mccafe_id: str) -> str:
 
 
 def view_order(order: Order, menu: Menu) -> str:
-    """Return a full text summary of the current order with prices and totals."""
+    """Return a text summary of the current order with prices and totals.
+
+    For sandwiches, only ingredient deviations from menu defaults are shown
+    (e.g. 'extra cheese', 'no lettuce'). Defaults are implied.
+    """
     if not order.items:
         return "Order is empty."
 
@@ -173,14 +177,27 @@ def view_order(order: Order, menu: Menu) -> str:
     lines = []
     for i, item in enumerate(priced.items):
         if item.kind == "sandwich":
-            ing_str = ", ".join(f"{k}={v}" for k, v in item.ingredients.items())
+            sandwich = _find_sandwich(menu, item.item_id)
+            default_map = {ing.id: ing.default for ing in sandwich.ingredients}
+            deviations = []
+            for ing in sandwich.ingredients:  # menu order, not dict order
+                count = item.ingredients.get(ing.id, ing.default)
+                if count == default_map[ing.id]:
+                    continue
+                if count == 0:
+                    deviations.append(f"no {ing.name.lower()}")
+                elif count == default_map[ing.id] + 1:
+                    deviations.append(f"extra {ing.name.lower()}")
+                else:
+                    deviations.append(f"{count}x {ing.name.lower()}")
+            mods_str = ", ".join(deviations) if deviations else "as default"
             meal_str = ""
             if item.is_meal:
                 size = _find_meal_size(menu, item.meal_size_id)
                 drink = _find_drink_type(menu, item.meal_drink_type_id)
                 meal_str = f" ({size.name} meal, {drink.name})"
             lines.append(
-                f"{i}: {item.name}{meal_str} [{ing_str}] — SR {item.computed_price}"
+                f"{i}: {item.name}{meal_str} ({mods_str}) — SR {item.computed_price}"
             )
         elif item.kind == "drink":
             lines.append(f"{i}: {item.size_name} {item.name} — SR {item.price}")
