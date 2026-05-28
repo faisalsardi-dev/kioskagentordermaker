@@ -3,8 +3,8 @@ from pathlib import Path
 import json
 from totaling import price_order
 from fastapi.responses import HTMLResponse, RedirectResponse
-
-from fastapi import FastAPI, Request, HTTPException
+import uuid
+from fastapi import FastAPI, Request, HTTPException, Cookie, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -33,6 +33,20 @@ templates = Jinja2Templates(directory=ROOT / "templates")
 # Single global order. Single-user demo only.
 # Production would key orders by session ID.
 ORDER: Order = Order()
+
+# Per-session state for /orderai conversations.
+# Key: session_id (UUID string). Value: (history, order).
+# Lives in memory; dies on server restart.
+SESSIONS: dict[str, tuple[list, Order]] = {}
+
+
+def get_or_create_session(session_id: str | None) -> tuple[str, list, Order]:
+    """Return (session_id, history, order). Creates new state if needed."""
+    if session_id is None or session_id not in SESSIONS:
+        session_id = str(uuid.uuid4())
+        SESSIONS[session_id] = ([], Order())
+    history, order = SESSIONS[session_id]
+    return session_id, history, order
 
 
 def load_menu_dict() -> dict:
@@ -289,3 +303,57 @@ def order_remove(index: int):
 def order_reset():
     ORDER.items.clear()
     return RedirectResponse(url="/order", status_code=303)
+
+
+@app.get("/orderai", response_class=HTMLResponse)
+def orderai_page(
+    request: Request,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, history, order = get_or_create_session(session_id)
+
+    # Filter to user-visible messages only (skip system + tool messages)
+    visible = []
+    for msg in history:
+        role = type(msg).__name__
+        if role == "HumanMessage":
+            visible.append({"role": "user", "content": msg.content})
+        elif role == "AIMessage" and msg.content:
+            visible.append({"role": "assistant", "content": msg.content})
+
+    response = templates.TemplateResponse(
+        request, "orderai.html",
+        {"messages": visible},
+    )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
+
+
+@app.post("/orderai/message")
+async def orderai_message(
+    request: Request,
+    session_id: str | None = Cookie(default=None),
+):
+    from llmagent import run_turn  # local import to avoid loading LangChain at startup
+
+    session_id, history, order = get_or_create_session(session_id)
+    form = await request.form()
+    user_message = (form.get("message") or "").strip()
+
+    if user_message:
+        menu = load_menu()
+        _, new_history = run_turn(user_message, history, order, menu)
+        SESSIONS[session_id] = (new_history, order)
+
+    response = RedirectResponse(url="/orderai", status_code=303)
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
+
+
+@app.post("/orderai/reset")
+def orderai_reset(session_id: str | None = Cookie(default=None)):
+    if session_id and session_id in SESSIONS:
+        del SESSIONS[session_id]
+    response = RedirectResponse(url="/orderai", status_code=303)
+    response.delete_cookie("session_id")
+    return response
