@@ -1,0 +1,13 @@
+-Implement a standard kiosk UI for manual ordering, unchanged.
+
+-Build an AI web interface that accepts natural-language orders and generates a structured order.
+
+-Create a code generation and lookup system linking AI orders to kiosk retrieval.
+
+-Ensure the kiosk can retrieve orders via code and go directly to checkout.
+
+-Add a QR code on the kiosk screen that links to the AI order builder.
+
+-Validate AI-generated orders in the backend before they're accepted by the kiosk.
+
+-Deploy both AI agent and kiosk backend on a cloud platform for scalability.
