@@ -1,0 +1,138 @@
+MENU STRUCTURE OVERVIEW
+=======================
+
+The menu is one big dict with 7 top-level keys:
+
+  sandwiches   -> list of 2 dicts
+  meal_sizes   -> list of 3 dicts
+  drink_sizes  -> list of 3 dicts
+  drink_types  -> list of 5 dicts
+  water        -> 1 dict (standalone, not a list)
+  sauces       -> list of 3 dicts
+  mccafe       -> list of 2 dicts
+
+
+SANDWICHES (list of 2 dicts)
+----------------------------
+Each sandwich dict has:
+  id           -> short internal name (string)
+  name         -> display name (string)
+  price        -> base price in SAR (float)
+  image        -> image filename (string)
+  ingredients  -> list of dicts (one per customizable ingredient)
+
+Each ingredient dict has:
+  id           -> short internal name (string)
+  name         -> display name (string)
+  default      -> starting count when added to cart (int)
+  min          -> smallest allowed count (int)
+  max          -> largest allowed count (int)
+  extra_price  -> SAR charged per unit above default (float)
+
+  1) McChicken Spicy - 19.00 SAR
+     ingredients:
+       - chicken_patty (default 1, min 1, max 5, +5.00 each)
+       - cheese        (default 1, min 0, max 5, +1.50 each)
+       - lettuce       (default 1, min 0, max 5, free)
+       - tomato        (default 0, min 0, max 5, free)
+       - mayo          (default 1, min 0, max 5, free)
+
+  2) McRoyale - 20.00 SAR
+     ingredients:
+       - beef_patty (default 1, min 1, max 5, +5.00 each)
+       - cheese     (default 1, min 0, max 5, +1.50 each)
+       - mayo       (default 1, min 0, max 5, free)
+       - lettuce    (default 1, min 0, max 5, free)
+       - tomato     (default 1, min 0, max 5, free)
+       - pickle     (default 1, min 0, max 5, free)
+       - onion      (default 1, min 0, max 5, free)
+       - ketchup    (default 1, min 0, max 5, free)
+       - mustard    (default 1, min 0, max 5, free)
+
+
+MEAL_SIZES (list of 3 dicts)
+----------------------------
+Each meal_size dict has:
+  id    -> short label (string, e.g. "S")
+  name  -> display name (string, e.g. "Small")
+  price -> SAR upcharge added to sandwich to make it a meal (float)
+
+  - Small  (+5.00 SAR)
+  - Medium (+7.00 SAR)
+  - Large  (+9.00 SAR)
+
+Note: meal size determines both fries size and drink size at once.
+
+
+DRINK_SIZES (list of 3 dicts)
+-----------------------------
+Same shape as meal_sizes but used for STANDALONE drink purchases.
+  - Small  (4.00 SAR)
+  - Medium (5.00 SAR)
+  - Large  (5.50 SAR)
+
+Note: only applies to sized drinks (sodas). Water has its own flat price.
+
+
+DRINK_TYPES (list of 5 dicts)
+-----------------------------
+Each drink_type dict has:
+  id   -> short internal name (string)
+  name -> display name (string)
+
+  - Coke Regular
+  - Coke Zero
+  - Sprite Regular
+  - Sprite Zero
+  - Fanta Orange
+
+These are the sized sodas. Used both inside meals (free, picked as the
+meal's drink) and standalone (paired with a drink_size).
+
+
+WATER (1 dict, standalone)
+--------------------------
+A single dict, NOT inside a list:
+  id    -> "water"
+  name  -> "Water"
+  price -> 2.00 SAR (flat, no size)
+
+Treated as its own entry because it doesn't share the soda shape
+(no size variants).
+
+
+SAUCES (list of 3 dicts)
+------------------------
+Each sauce dict has:
+  id    -> short internal name (string)
+  name  -> display name (string)
+  price -> flat price in SAR (float)
+
+  - BBQ Sauce      (2.00 SAR)
+  - Mac Big Sauce  (2.00 SAR)
+  - Tasteful Sauce (2.00 SAR)
+
+No customization, no size. Add to cart as their own line items.
+
+
+MCCAFE (list of 2 dicts)
+------------------------
+Each mccafe dict has:
+  id    -> short internal name (string)
+  name  -> display name (string)
+  price -> flat price in SAR (float)
+
+  - Cappuccino (8.00 SAR)
+  - Latte      (8.00 SAR)
+
+No customization, no size. Add to cart as their own line items.
+
+
+CONVENTIONS USED THROUGHOUT
+===========================
+- All prices are in SAR (Saudi Riyal), as floats with 2 decimal places.
+- All ids use lowercase snake_case (e.g. "coke_zero", "mac_big_sauce").
+- All names use Title Case for display (e.g. "Coke Zero").
+- Ingredient counts are integers in the range [min, max].
+- The "default" field is the starting count. Receipts only show
+  deviations from default.

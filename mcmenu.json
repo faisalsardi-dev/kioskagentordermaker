@@ -1,0 +1,67 @@
+{
+  "sandwiches": [
+    {
+      "id": "mcchicken_spicy",
+      "name": "McChicken Spicy",
+      "price": 19.00,
+      "image": "mcchicken_spicy.png",
+      "ingredients": [
+        { "id": "chicken_patty", "name": "Chicken Patty", "default": 1, "min": 1, "max": 5, "extra_price": 5.00 },
+        { "id": "cheese",        "name": "Cheese",        "default": 1, "min": 0, "max": 5, "extra_price": 1.50 },
+        { "id": "lettuce",       "name": "Lettuce",       "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "tomato",        "name": "Tomato",        "default": 0, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "mayo",          "name": "Mayonnaise",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 }
+      ]
+    },
+    {
+      "id": "mcroyale",
+      "name": "McRoyale",
+      "price": 20.00,
+      "image": "mcroyale.png",
+      "ingredients": [
+        { "id": "beef_patty", "name": "Beef Patty", "default": 1, "min": 1, "max": 5, "extra_price": 5.00 },
+        { "id": "cheese",     "name": "Cheese",     "default": 1, "min": 0, "max": 5, "extra_price": 1.50 },
+        { "id": "mayo",       "name": "Mayonnaise", "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "lettuce",    "name": "Lettuce",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "tomato",     "name": "Tomato",     "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "pickle",     "name": "Pickle",     "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "onion",      "name": "Onion",      "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "ketchup",    "name": "Ketchup",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+        { "id": "mustard",    "name": "Mustard",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 }
+      ]
+    }
+  ],
+
+  "meal_sizes": [
+    { "id": "S", "name": "Small",  "price": 5.00 },
+    { "id": "M", "name": "Medium", "price": 7.00 },
+    { "id": "L", "name": "Large",  "price": 9.00 }
+  ],
+
+  "drink_sizes": [
+    { "id": "S", "name": "Small",  "price": 4.00 },
+    { "id": "M", "name": "Medium", "price": 5.00 },
+    { "id": "L", "name": "Large",  "price": 5.50 }
+  ],
+
+  "drink_types": [
+    { "id": "coke_regular",   "name": "Coke Regular" },
+    { "id": "coke_zero",      "name": "Coke Zero" },
+    { "id": "sprite_regular", "name": "Sprite Regular" },
+    { "id": "sprite_zero",    "name": "Sprite Zero" },
+    { "id": "fanta_orange",   "name": "Fanta Orange" }
+  ],
+
+  "water": { "id": "water", "name": "Water", "price": 2.00 },
+
+  "sauces": [
+    { "id": "bbq",           "name": "BBQ Sauce",      "price": 2.00 },
+    { "id": "mac_big_sauce", "name": "Mac Big Sauce",  "price": 2.00 },
+    { "id": "tasteful",      "name": "Tasteful Sauce", "price": 2.00 }
+  ],
+
+  "mccafe": [
+    { "id": "cappuccino", "name": "Cappuccino", "price": 8.00 },
+    { "id": "latte",      "name": "Latte",      "price": 8.00 }
+  ]
+}
