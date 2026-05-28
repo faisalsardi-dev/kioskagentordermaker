@@ -29,7 +29,22 @@
         { "id": "ketchup",    "name": "Ketchup",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
         { "id": "mustard",    "name": "Mustard",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 }
       ]
-    }
+    },
+    {
+  "id": "quarter_pounder",
+  "name": "Quarter Pounder",
+  "price": 19.00,
+  "image": "quarter_pounder.png",
+  "ingredients": [
+    { "id": "beef_patty", "name": "Beef Patty", "default": 1, "min": 1, "max": 5, "extra_price": 6.00 },
+    { "id": "cheese",     "name": "Cheese",     "default": 2, "min": 0, "max": 5, "extra_price": 1.50 },
+    { "id": "pickle",     "name": "Pickle",     "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+    { "id": "onion",      "name": "Onion",      "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+    { "id": "ketchup",    "name": "Ketchup",    "default": 1, "min": 0, "max": 5, "extra_price": 0.00 },
+    { "id": "tomato",     "name": "Tomato",     "default": 0, "min": 0, "max": 5, "extra_price": 0.00 },
+    { "id": "lettuce",    "name": "Lettuce",    "default": 0, "min": 0, "max": 5, "extra_price": 0.00 }
+  ]
+}
   ],
 
   "meal_sizes": [
