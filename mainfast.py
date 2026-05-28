@@ -7,6 +7,16 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from datapydentic import (
+    Menu,
+    Order,
+    SandwichOrderItem,
+    DrinkOrderItem,
+    WaterOrderItem,
+    SauceOrderItem,
+    McCafeOrderItem,
+)
+
 ROOT = Path(__file__).parent
 MENU_PATH = ROOT / "mcmenu.json"
 
@@ -20,28 +30,16 @@ templates = Jinja2Templates(directory=ROOT / "templates")
 
 # Single global order. Single-user demo only.
 # Production would key orders by session ID.
-ORDER: list[dict] = []
+ORDER: Order = Order()
 
 
-def load_menu() -> dict:
+def load_menu_dict() -> dict:
     with MENU_PATH.open() as f:
         return json.load(f)
 
 
-def find_sandwich(menu: dict, sandwich_id: str) -> dict | None:
-    return next((s for s in menu["sandwiches"] if s["id"] == sandwich_id), None)
-
-
-def find_drink_type(menu: dict, drink_id: str) -> dict | None:
-    return next((d for d in menu["drink_types"] if d["id"] == drink_id), None)
-
-
-def find_sauce(menu: dict, sauce_id: str) -> dict | None:
-    return next((s for s in menu["sauces"] if s["id"] == sauce_id), None)
-
-
-def find_mccafe(menu: dict, item_id: str) -> dict | None:
-    return next((m for m in menu["mccafe"] if m["id"] == item_id), None)
+def load_menu() -> Menu:
+    return Menu(**load_menu_dict())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -51,7 +49,7 @@ def landing(request: Request):
 
 @app.get("/category/{category}", response_class=HTMLResponse)
 def category_page(request: Request, category: str):
-    menu = load_menu()
+    menu = load_menu_dict()
 
     if category == "sandwiches":
         items = [{"id": s["id"], "name": s["name"], "price": s["price"]} for s in menu["sandwiches"]]
@@ -77,10 +75,10 @@ def category_page(request: Request, category: str):
 
 @app.get("/customize/{kind}/{item_id}", response_class=HTMLResponse)
 def customize_get(request: Request, kind: str, item_id: str, added: bool = False):
-    menu = load_menu()
+    menu = load_menu_dict()
 
     if kind == "sandwich":
-        item = find_sandwich(menu, item_id)
+        item = next((s for s in menu["sandwiches"] if s["id"] == item_id), None)
         if not item:
             raise HTTPException(404, f"Sandwich not found: {item_id}")
         return templates.TemplateResponse(
@@ -99,7 +97,7 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
                 request, "customize_water.html",
                 {"item": menu["water"], "added": added},
             )
-        item = find_drink_type(menu, item_id)
+        item = next((d for d in menu["drink_types"] if d["id"] == item_id), None)
         if not item:
             raise HTTPException(404, f"Drink not found: {item_id}")
         return templates.TemplateResponse(
@@ -108,7 +106,7 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
         )
 
     elif kind == "sauce":
-        item = find_sauce(menu, item_id)
+        item = next((s for s in menu["sauces"] if s["id"] == item_id), None)
         if not item:
             raise HTTPException(404, f"Sauce not found: {item_id}")
         return templates.TemplateResponse(
@@ -117,7 +115,7 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
         )
 
     elif kind == "mccafe":
-        item = find_mccafe(menu, item_id)
+        item = next((m for m in menu["mccafe"] if m["id"] == item_id), None)
         if not item:
             raise HTTPException(404, f"McCafé item not found: {item_id}")
         return templates.TemplateResponse(
@@ -132,36 +130,41 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
 @app.post("/customize/sandwich/{item_id}", response_class=HTMLResponse)
 async def customize_sandwich_post(request: Request, item_id: str):
     menu = load_menu()
-    item = find_sandwich(menu, item_id)
-    if not item:
+    sandwich = next((s for s in menu.sandwiches if s.id == item_id), None)
+    if not sandwich:
         raise HTTPException(404, f"Sandwich not found: {item_id}")
 
     form = await request.form()
     ingredients = {}
-    for ing in item["ingredients"]:
-        raw = form.get(f"ing_{ing['id']}", str(ing["default"]))
-        ingredients[ing["id"]] = max(ing["min"], min(ing["max"], int(raw)))
+    for ing in sandwich.ingredients:
+        raw = form.get(f"ing_{ing.id}", str(ing.default))
+        ingredients[ing.id] = max(ing.min, min(ing.max, int(raw)))
 
-    meal_size = form.get("meal_size") or None
-    meal_drink = form.get("meal_drink") if meal_size else None
+    meal_size_id = form.get("meal_size") or None
+    is_meal = meal_size_id is not None
+    meal_drink_type_id = form.get("meal_drink") if is_meal else None
     quantity = max(1, int(form.get("quantity", "1")))
 
-    ORDER.append({
-        "kind": "sandwich",
-        "id": item["id"],
-        "name": item["name"],
-        "ingredients": ingredients,
-        "meal_size": meal_size,
-        "meal_drink": meal_drink,
-        "quantity": quantity,
-    })
+    for _ in range(quantity):
+        ORDER.items.append(SandwichOrderItem(
+            item_id=sandwich.id,
+            name=sandwich.name,
+            base_price=sandwich.price,
+            is_meal=is_meal,
+            meal_size_id=meal_size_id,
+            meal_drink_type_id=meal_drink_type_id,
+            ingredients=ingredients,
+            computed_price=0.0,  # filled in by price_order() at /order
+        ))
 
+    menu_dict = load_menu_dict()
+    item_dict = next(s for s in menu_dict["sandwiches"] if s["id"] == item_id)
     return templates.TemplateResponse(
         request, "customize_sandwich.html",
         {
-            "item": item,
-            "meal_sizes": menu["meal_sizes"],
-            "drink_types": menu["drink_types"],
+            "item": item_dict,
+            "meal_sizes": menu_dict["meal_sizes"],
+            "drink_types": menu_dict["drink_types"],
             "added": True,
         },
     )
@@ -173,85 +176,91 @@ async def customize_drink_post(request: Request, item_id: str):
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
-    if item_id == menu["water"]["id"]:
-        ORDER.append({
-            "kind": "water",
-            "id": menu["water"]["id"],
-            "name": menu["water"]["name"],
-            "quantity": quantity,
-        })
+    if item_id == menu.water.id:
+        for _ in range(quantity):
+            ORDER.items.append(WaterOrderItem(price=menu.water.price))
         return templates.TemplateResponse(
             request, "customize_water.html",
-            {"item": menu["water"], "added": True},
+            {"item": menu.water.model_dump(), "added": True},
         )
 
-    item = find_drink_type(menu, item_id)
-    if not item:
+    drink_type = next((d for d in menu.drink_types if d.id == item_id), None)
+    if not drink_type:
         raise HTTPException(404, f"Drink not found: {item_id}")
 
-    size = form.get("size", "M")
-    ORDER.append({
-        "kind": "drink",
-        "id": item["id"],
-        "name": item["name"],
-        "size": size,
-        "quantity": quantity,
-    })
+    size_id = form.get("size", "M")
+    size = next((s for s in menu.drink_sizes if s.id == size_id), None)
+    if not size:
+        raise HTTPException(400, f"Invalid drink size: {size_id}")
+
+    for _ in range(quantity):
+        ORDER.items.append(DrinkOrderItem(
+            drink_type_id=drink_type.id,
+            name=drink_type.name,
+            size_id=size.id,
+            size_name=size.name,
+            price=size.price,
+        ))
+
+    menu_dict = load_menu_dict()
+    item_dict = next(d for d in menu_dict["drink_types"] if d["id"] == item_id)
     return templates.TemplateResponse(
         request, "customize_drink.html",
-        {"item": item, "drink_sizes": menu["drink_sizes"], "added": True},
+        {"item": item_dict, "drink_sizes": menu_dict["drink_sizes"], "added": True},
     )
 
 
 @app.post("/customize/sauce/{item_id}", response_class=HTMLResponse)
 async def customize_sauce_post(request: Request, item_id: str):
     menu = load_menu()
-    item = find_sauce(menu, item_id)
-    if not item:
+    sauce = next((s for s in menu.sauces if s.id == item_id), None)
+    if not sauce:
         raise HTTPException(404, f"Sauce not found: {item_id}")
 
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
-    ORDER.append({
-        "kind": "sauce",
-        "id": item["id"],
-        "name": item["name"],
-        "quantity": quantity,
-    })
+    for _ in range(quantity):
+        ORDER.items.append(SauceOrderItem(
+            sauce_id=sauce.id,
+            name=sauce.name,
+            price=sauce.price,
+        ))
+
     return templates.TemplateResponse(
         request, "customize_sauce.html",
-        {"item": item, "added": True},
+        {"item": sauce.model_dump(), "added": True},
     )
 
 
 @app.post("/customize/mccafe/{item_id}", response_class=HTMLResponse)
 async def customize_mccafe_post(request: Request, item_id: str):
     menu = load_menu()
-    item = find_mccafe(menu, item_id)
-    if not item:
+    mccafe = next((m for m in menu.mccafe if m.id == item_id), None)
+    if not mccafe:
         raise HTTPException(404, f"McCafé item not found: {item_id}")
 
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
-    ORDER.append({
-        "kind": "mccafe",
-        "id": item["id"],
-        "name": item["name"],
-        "quantity": quantity,
-    })
+    for _ in range(quantity):
+        ORDER.items.append(McCafeOrderItem(
+            item_id=mccafe.id,
+            name=mccafe.name,
+            price=mccafe.price,
+        ))
+
     return templates.TemplateResponse(
         request, "customize_mccafe.html",
-        {"item": item, "added": True},
+        {"item": mccafe.model_dump(), "added": True},
     )
 
 
 @app.get("/api/menu")
 def get_menu() -> dict:
-    return load_menu()
+    return load_menu_dict()
 
 
 @app.get("/api/order")
-def get_order() -> list[dict]:
+def get_order() -> Order:
     return ORDER
