@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mcmenumimic — {{ category }}</title>
+</head>
+<body>
+    <p><a href="/">&larr; Back to menu</a></p>
+    <h1>{{ category | capitalize }}</h1>
+    <ul>
+        {% for item in items %}
+            <li>
+                <a href="/customize/{{ kind }}/{{ item.id }}">{{ item.name }}</a>
+                {% if item.price %} — SR {{ item.price }}{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

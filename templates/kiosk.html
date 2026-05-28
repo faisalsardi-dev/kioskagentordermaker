@@ -7,36 +7,13 @@
 </head>
 <body>
     <h1>mcmenumimic</h1>
-
-    <h2>Sandwiches</h2>
+    <p>Choose a category:</p>
     <ul>
-        {% for s in menu.sandwiches %}
-            <li>{{ s.name }} — SR {{ s.price }}</li>
-        {% endfor %}
+        <li><a href="/category/sandwiches">Sandwiches</a></li>
+        <li><a href="/category/drinks">Drinks</a></li>
+        <li><a href="/category/sauces">Sauces</a></li>
+        <li><a href="/category/mccafe">McCafé</a></li>
     </ul>
-
-    <h2>Drinks</h2>
-    <ul>
-        {% for d in menu.drink_types %}
-            <li>{{ d.name }}</li>
-        {% endfor %}
-    </ul>
-
-    <h2>Water</h2>
-    <p>{{ menu.water.name }} — SR {{ menu.water.price }}</p>
-
-    <h2>Sauces</h2>
-    <ul>
-        {% for sauce in menu.sauces %}
-            <li>{{ sauce.name }} — SR {{ sauce.price }}</li>
-        {% endfor %}
-    </ul>
-
-    <h2>McCafé</h2>
-    <ul>
-        {% for item in menu.mccafe %}
-            <li>{{ item.name }} — SR {{ item.price }}</li>
-        {% endfor %}
-    </ul>
+    <p><a href="/cart">View cart</a></p>
 </body>
 </html>
