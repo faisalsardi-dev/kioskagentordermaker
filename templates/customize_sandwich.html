@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mcmenumimic — {{ item.name }}</title>
+</head>
+<body>
+    <p><a href="/category/sandwiches">&larr; Back to sandwiches</a></p>
+    <h1>{{ item.name }}</h1>
+    <p>Base price: SR {{ item.price }}</p>
+
+    {% if added %}
+        <p><strong>✓ Added to cart.</strong> <a href="/cart">View cart</a> or customize another below.</p>
+    {% endif %}
+
+    <form method="post" action="/customize/sandwich/{{ item.id }}">
+        <h2>Ingredients</h2>
+        <ul>
+            {% for ing in item.ingredients %}
+                <li>
+                    <label>
+                        {{ ing.name }}
+                        (default {{ ing.default }}, min {{ ing.min }}, max {{ ing.max }}{% if ing.extra_price %}, extra +SR {{ ing.extra_price }} each{% endif %})
+                        <input type="number"
+                               name="ing_{{ ing.id }}"
+                               value="{{ ing.default }}"
+                               min="{{ ing.min }}"
+                               max="{{ ing.max }}">
+                    </label>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <h2>Make it a meal?</h2>
+        <label><input type="radio" name="meal_size" value="" checked> No</label>
+        {% for size in meal_sizes %}
+            <label>
+                <input type="radio" name="meal_size" value="{{ size.id }}">
+                {{ size.name }} (+SR {{ size.price }})
+            </label>
+        {% endfor %}
+
+        <h2>Meal drink (only used if you chose a meal above)</h2>
+        {% for drink in drink_types %}
+            <label>
+                <input type="radio" name="meal_drink" value="{{ drink.id }}" {% if loop.first %}checked{% endif %}>
+                {{ drink.name }}
+            </label>
+        {% endfor %}
+
+        <h2>Quantity</h2>
+        <label>
+            <input type="number" name="quantity" value="1" min="1" max="20">
+        </label>
+
+        <p><button type="submit">Add to Order</button></p>
+    </form>
+</body>
+</html>
