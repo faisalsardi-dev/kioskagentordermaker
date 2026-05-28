@@ -21,10 +21,12 @@ templates = Jinja2Templates(directory=ROOT / "templates")
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
+    with MENU_PATH.open() as f:
+        menu = json.load(f)
     return templates.TemplateResponse(
         request,
         "kiosk.html",
-        {"heading": "mcmenumimic"},
+        {"menu": menu},
     )
 
 

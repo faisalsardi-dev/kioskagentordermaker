@@ -6,7 +6,37 @@
     <title>mcmenumimic</title>
 </head>
 <body>
-    <h1>{{ heading }}</h1>
-    <p>Menu coming soon.</p>
+    <h1>mcmenumimic</h1>
+
+    <h2>Sandwiches</h2>
+    <ul>
+        {% for s in menu.sandwiches %}
+            <li>{{ s.name }} — SR {{ s.price }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Drinks</h2>
+    <ul>
+        {% for d in menu.drink_types %}
+            <li>{{ d.name }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Water</h2>
+    <p>{{ menu.water.name }} — SR {{ menu.water.price }}</p>
+
+    <h2>Sauces</h2>
+    <ul>
+        {% for sauce in menu.sauces %}
+            <li>{{ sauce.name }} — SR {{ sauce.price }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>McCafé</h2>
+    <ul>
+        {% for item in menu.mccafe %}
+            <li>{{ item.name }} — SR {{ item.price }}</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
