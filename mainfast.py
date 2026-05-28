@@ -1,6 +1,8 @@
 """FastAPI app: kiosk mimic + AI order builder."""
 from pathlib import Path
 import json
+from totaling import price_order
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
@@ -264,3 +266,26 @@ def get_menu() -> dict:
 @app.get("/api/order")
 def get_order() -> Order:
     return ORDER
+
+
+@app.get("/order", response_class=HTMLResponse)
+def order_page(request: Request):
+    menu = load_menu()
+    priced = price_order(ORDER, menu)
+    return templates.TemplateResponse(
+        request, "order.html",
+        {"order": priced},
+    )
+
+
+@app.post("/order/remove/{index}")
+def order_remove(index: int):
+    if 0 <= index < len(ORDER.items):
+        ORDER.items.pop(index)
+    return RedirectResponse(url="/order", status_code=303)
+
+
+@app.post("/order/reset")
+def order_reset():
+    ORDER.items.clear()
+    return RedirectResponse(url="/order", status_code=303)

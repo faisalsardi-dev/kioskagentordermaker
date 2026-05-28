@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mcmenumimic — Your Order</title>
+</head>
+<body>
+    <p><a href="/">&larr; Back to menu</a></p>
+    <h1>Your Order</h1>
+
+    {% if order.items %}
+        <ol>
+            {% for item in order.items %}
+                <li>
+                    {% if item.kind == "sandwich" %}
+                        <strong>{{ item.name }}</strong>
+                        {% if item.is_meal %}
+                            ({{ item.meal_size_id }} meal with {{ item.meal_drink_type_id }})
+                        {% endif %}
+                        — SR {{ item.computed_price }}
+                        <ul>
+                            {% for ing_id, count in item.ingredients.items() %}
+                                <li>{{ ing_id }}: {{ count }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% elif item.kind == "drink" %}
+                        <strong>{{ item.name }}</strong> ({{ item.size_name }}) — SR {{ item.price }}
+                    {% elif item.kind == "water" %}
+                        <strong>{{ item.name }}</strong> — SR {{ item.price }}
+                    {% elif item.kind == "sauce" %}
+                        <strong>{{ item.name }}</strong> — SR {{ item.price }}
+                    {% elif item.kind == "mccafe" %}
+                        <strong>{{ item.name }}</strong> — SR {{ item.price }}
+                    {% endif %}
+
+                    <form method="post" action="/order/remove/{{ loop.index0 }}" style="display:inline">
+                        <button type="submit">Remove</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ol>
+
+        <hr>
+        <p>Subtotal: SR {{ order.subtotal }}</p>
+        <p>Tax (15%): SR {{ order.tax }}</p>
+        <p><strong>Total: SR {{ order.total }}</strong></p>
+
+        <form method="post" action="/order/reset">
+            <button type="submit">Reset order</button>
+        </form>
+    {% else %}
+        <p><em>Your order is empty.</em></p>
+        <p><a href="/">Start adding items</a></p>
+    {% endif %}
+</body>
+</html>
