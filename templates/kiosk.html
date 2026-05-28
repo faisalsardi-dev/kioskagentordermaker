@@ -7,14 +7,33 @@
 </head>
 <body>
     <h1>mcmenumimic</h1>
-    <p>Choose a category:</p>
+
+    <h2>Got an AI-built order?</h2>
+    {% if error_message %}
+        <p><strong style="color: #b00020">{{ error_message }}</strong></p>
+    {% endif %}
+    <form method="post" action="/redeem">
+        <label>
+            Enter your 4-character code:
+            <input type="text" name="code" maxlength="4" autocomplete="off" required>
+        </label>
+        <button type="submit">Redeem</button>
+    </form>
+
+    <hr>
+
+    <h2>Or browse the menu:</h2>
     <ul>
         <li><a href="/category/sandwiches">Sandwiches</a></li>
         <li><a href="/category/drinks">Drinks</a></li>
         <li><a href="/category/sauces">Sauces</a></li>
         <li><a href="/category/mccafe">McCafé</a></li>
     </ul>
+
     <p><a href="/order">View order</a></p>
-    <p><a href="/orderai">Build your order with AI →</a></p>
+
+    <hr>
+
+    <p><a href="/orderai">Build your order with AI &rarr;</a></p>
 </body>
 </html>

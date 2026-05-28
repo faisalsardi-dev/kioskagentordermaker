@@ -4,7 +4,7 @@ import json
 from totaling import price_order
 from fastapi.responses import HTMLResponse, RedirectResponse
 import uuid
-from fastapi import FastAPI, Request, HTTPException, Cookie, Response
+from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,6 +18,8 @@ from datapydentic import (
     SauceOrderItem,
     McCafeOrderItem,
 )
+
+from llmtools import PENDING_ORDERS, _reap_expired_pending
 
 ROOT = Path(__file__).parent
 MENU_PATH = ROOT / "mcmenu.json"
@@ -59,8 +61,14 @@ def load_menu() -> Menu:
 
 
 @app.get("/", response_class=HTMLResponse)
-def landing(request: Request):
-    return templates.TemplateResponse(request, "kiosk.html", {})
+def landing(request: Request, error: str | None = None):
+    error_message = None
+    if error == "bad_code":
+        error_message = "Code not found or expired. Please try again."
+    return templates.TemplateResponse(
+        request, "kiosk.html",
+        {"error_message": error_message},
+    )
 
 
 @app.get("/category/{category}", response_class=HTMLResponse)
@@ -357,3 +365,25 @@ def orderai_reset(session_id: str | None = Cookie(default=None)):
     response = RedirectResponse(url="/orderai", status_code=303)
     response.delete_cookie("session_id")
     return response
+
+
+@app.post("/redeem")
+def redeem(code: str = Form(...)):
+    """Redeem a 4-hex AI-built order code into the kiosk's ORDER."""
+    code = code.strip().upper()
+    _reap_expired_pending()
+
+    if code not in PENDING_ORDERS:
+        return RedirectResponse(url="/?error=bad_code", status_code=303)
+
+    pending_order, _ = PENDING_ORDERS[code]
+
+    # Replace kiosk order with the redeemed items (deep copy preserves
+    # pending until we delete it, in case something fails between here
+    # and the del).
+    ORDER.items.clear()
+    for item in pending_order.items:
+        ORDER.items.append(item.model_copy(deep=True))
+
+    del PENDING_ORDERS[code]
+    return RedirectResponse(url="/order", status_code=303)

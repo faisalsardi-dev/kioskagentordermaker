@@ -16,7 +16,33 @@ from datapydentic import (
     McCafeOrderItem,
 )
 from totaling import price_order
+#===========code redemption=--------
+import secrets
+import time
 
+# Storage for finalized AI orders awaiting kiosk redemption.
+# Key: 4-hex code. Value: (Order, expires_at_epoch_seconds).
+PENDING_ORDERS: dict[str, tuple["Order", float]] = {}
+
+CODE_TTL_SECONDS = 60
+
+
+def _reap_expired_pending() -> None:
+    """Remove expired entries from PENDING_ORDERS."""
+    now = time.time()
+    expired = [code for code, (_, exp) in PENDING_ORDERS.items() if exp < now]
+    for code in expired:
+        del PENDING_ORDERS[code]
+
+
+def _generate_unique_code() -> str:
+    """Return a 4-hex uppercase code not currently in PENDING_ORDERS."""
+    _reap_expired_pending()
+    for _ in range(100):
+        code = secrets.token_hex(2).upper()
+        if code not in PENDING_ORDERS:
+            return code
+    raise RuntimeError("Could not generate a unique code; pending store may be saturated.")
 
 # ---------- internal helpers ----------
 
@@ -229,4 +255,29 @@ def clear_order(order: Order) -> str:
     return f"Cleared {n} item(s) from order."
 
 
-#one more function for code redemption
+def finalize_order(order: Order, menu: Menu) -> str:
+    """Finalize the current order: generate a code, stash a copy with TTL,
+    clear the session's order, return the code text.
+    """
+    if not order.items:
+        return "Error: order is empty, nothing to finalize."
+
+    # Deep-copy so future session mutations don't affect the pending entry.
+    priced = price_order(order, menu)
+    snapshot = priced.model_copy(deep=True)
+
+    code = _generate_unique_code()
+    expires_at = time.time() + CODE_TTL_SECONDS
+    PENDING_ORDERS[code] = (snapshot, expires_at)
+
+    # Clear the session's order in place so the agent has a fresh slate.
+    order.items.clear()
+    order.subtotal = 0.0
+    order.tax = 0.0
+    order.total = 0.0
+
+    return (
+        f"Order finalized. Code: {code}. "
+        f"Show this at the kiosk within {CODE_TTL_SECONDS} seconds. "
+        f"Total was SR {snapshot.total}."
+    )

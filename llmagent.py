@@ -135,10 +135,19 @@ def clear_order() -> str:
     """Remove all items from the order."""
     return llmtools.clear_order(_current_order)
 
+@tool
+def finalize_order() -> str:
+    """Lock in the current order and produce a 4-character pickup code.
+    Use ONLY after the user has explicitly confirmed (yes) to your readback.
+    After this is called, the order is sent to the kiosk and the session
+    order is cleared. Do not accept further changes to that order; tell the
+    user they can start a new order if they want.
+    """
+    return llmtools.finalize_order(_current_order, _current_menu)
 
 TOOLS = [
     add_sandwich, add_drink, add_water, add_sauce, add_mccafe,
-    view_order, remove_item, clear_order,
+    view_order, remove_item, clear_order, finalize_order,
 ]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
@@ -202,14 +211,21 @@ If the user's request would exceed 5 for any ingredient, refuse politely:
 "Sorry, the maximum is 5." Offer to do 5 or ask what to change.
 
 # Confirmation rule
-Before reporting a final order to the user:
+Before finalizing, you MUST get explicit yes from the user:
 1. Call view_order to see the current state.
 2. Read back the order using view_order's output as your source of truth.
    Mention only ingredient deviations from defaults, not every ingredient.
 3. Ask: "Should I lock this in? (yes/no)"
 4. If they say no, ask what to change. Make the changes, then re-confirm.
+5. If they say yes, call finalize_order and read the code back to the user.
 
-(Note: finalize_order is not yet available. For now, just confirm and stop.)
+# After finalization
+Once finalize_order is called:
+- The order is locked and the session order is cleared automatically.
+- If the user wants more, treat it as a fresh order — DO NOT reference
+  ingredients or items from the finalized order.
+- If they ask about the previous order, say it's already locked in with
+  code XXXX (the one you returned).
 
 Always be brief and friendly. Don't over-narrate your tool use.
 """
