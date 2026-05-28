@@ -1,2 +1,5 @@
 python-dotenv
 langchain-openai
+fastapi
+uvicorn[standard]
+jinja2
