@@ -11,7 +11,7 @@
     <p>Base price: SR {{ item.price }}</p>
 
     {% if added %}
-        <p><strong>✓ Added to cart.</strong> <a href="/cart">View cart</a> or customize another below.</p>
+        <p><strong>✓ Added to order.</strong> <a href="/order">View order</a> or customize another below.</p>
     {% endif %}
 
     <form method="post" action="/customize/sandwich/{{ item.id }}">

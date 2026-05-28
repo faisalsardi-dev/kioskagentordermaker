@@ -67,10 +67,10 @@ class Menu(BaseModel):
     mccafe: list[McCafeItem]
 
 
-# ----------------------- CART TYPES -----------------------
+# ----------------------- ORDER TYPES -----------------------
 
 
-class SandwichCartItem(BaseModel):
+class SandwichOrderItem(BaseModel):
     kind: Literal["sandwich"] = "sandwich"
     item_id: str
     name: str
@@ -82,7 +82,7 @@ class SandwichCartItem(BaseModel):
     computed_price: float = Field(ge=0)
 
 
-class DrinkCartItem(BaseModel):
+class DrinkOrderItem(BaseModel):
     kind: Literal["drink"] = "drink"
     drink_type_id: str
     name: str
@@ -91,37 +91,37 @@ class DrinkCartItem(BaseModel):
     price: float = Field(ge=0)
 
 
-class WaterCartItem(BaseModel):
+class WaterOrderItem(BaseModel):
     kind: Literal["water"] = "water"
     name: str = "Water"
     price: float = Field(ge=0)
 
 
-class SauceCartItem(BaseModel):
+class SauceOrderItem(BaseModel):
     kind: Literal["sauce"] = "sauce"
     sauce_id: str
     name: str
     price: float = Field(ge=0)
 
 
-class McCafeCartItem(BaseModel):
+class McCafeOrderItem(BaseModel):
     kind: Literal["mccafe"] = "mccafe"
     item_id: str
     name: str
     price: float = Field(ge=0)
 
 
-CartItem = (
-    SandwichCartItem
-    | DrinkCartItem
-    | WaterCartItem
-    | SauceCartItem
-    | McCafeCartItem
+OrderItem = (
+    SandwichOrderItem
+    | DrinkOrderItem
+    | WaterOrderItem
+    | SauceOrderItem
+    | McCafeOrderItem
 )
 
 
-class Cart(BaseModel):
-    items: list[CartItem] = Field(default_factory=list)
+class Order(BaseModel):
+    items: list[OrderItem] = Field(default_factory=list)
     subtotal: float = Field(default=0.0, ge=0)
     tax: float = Field(default=0.0, ge=0)
     total: float = Field(default=0.0, ge=0)

@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 
-from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,9 +18,9 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=ROOT / "templates")
 
-# Single global cart. Single-user demo only.
-# Production would key carts by session ID.
-CART: list[dict] = []
+# Single global order. Single-user demo only.
+# Production would key orders by session ID.
+ORDER: list[dict] = []
 
 
 def load_menu() -> dict:
@@ -94,7 +94,6 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
         )
 
     elif kind == "drink":
-        # Water is a special case — no size, flat price
         if item_id == menu["water"]["id"]:
             return templates.TemplateResponse(
                 request, "customize_water.html",
@@ -147,7 +146,7 @@ async def customize_sandwich_post(request: Request, item_id: str):
     meal_drink = form.get("meal_drink") if meal_size else None
     quantity = max(1, int(form.get("quantity", "1")))
 
-    CART.append({
+    ORDER.append({
         "kind": "sandwich",
         "id": item["id"],
         "name": item["name"],
@@ -175,7 +174,7 @@ async def customize_drink_post(request: Request, item_id: str):
     quantity = max(1, int(form.get("quantity", "1")))
 
     if item_id == menu["water"]["id"]:
-        CART.append({
+        ORDER.append({
             "kind": "water",
             "id": menu["water"]["id"],
             "name": menu["water"]["name"],
@@ -191,7 +190,7 @@ async def customize_drink_post(request: Request, item_id: str):
         raise HTTPException(404, f"Drink not found: {item_id}")
 
     size = form.get("size", "M")
-    CART.append({
+    ORDER.append({
         "kind": "drink",
         "id": item["id"],
         "name": item["name"],
@@ -214,7 +213,7 @@ async def customize_sauce_post(request: Request, item_id: str):
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
-    CART.append({
+    ORDER.append({
         "kind": "sauce",
         "id": item["id"],
         "name": item["name"],
@@ -236,7 +235,7 @@ async def customize_mccafe_post(request: Request, item_id: str):
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
-    CART.append({
+    ORDER.append({
         "kind": "mccafe",
         "id": item["id"],
         "name": item["name"],
@@ -253,6 +252,6 @@ def get_menu() -> dict:
     return load_menu()
 
 
-@app.get("/api/cart")
-def get_cart() -> list[dict]:
-    return CART
+@app.get("/api/order")
+def get_order() -> list[dict]:
+    return ORDER

@@ -1,19 +1,19 @@
 from datapydentic import (
     Menu,
-    Cart,
-    SandwichCartItem,
-    DrinkCartItem,
-    WaterCartItem,
-    SauceCartItem,
-    McCafeCartItem,
+    Order,
+    SandwichOrderItem,
+    DrinkOrderItem,
+    WaterOrderItem,
+    SauceOrderItem,
+    McCafeOrderItem,
 )
 
 
 TAX_RATE = 0.15
 
 
-def price_sandwich(item: SandwichCartItem, menu: Menu) -> float:
-    """Compute the total price for one sandwich cart item."""
+def price_sandwich(item: SandwichOrderItem, menu: Menu) -> float:
+    """Compute the total price for one sandwich order item."""
     sandwich = next(s for s in menu.sandwiches if s.id == item.item_id)
 
     total = sandwich.price
@@ -30,28 +30,28 @@ def price_sandwich(item: SandwichCartItem, menu: Menu) -> float:
     return round(total, 2)
 
 
-def price_cart(cart: Cart, menu: Menu) -> Cart:
-    """Return a new Cart with computed_price set on sandwiches, and subtotal/tax/total filled in."""
+def price_order(order: Order, menu: Menu) -> Order:
+    """Return a new Order with computed_price set on sandwiches, and subtotal/tax/total filled in."""
     priced_items = []
     subtotal = 0.0
 
-    for item in cart.items:
-        if isinstance(item, SandwichCartItem):
+    for item in order.items:
+        if isinstance(item, SandwichOrderItem):
             new_price = price_sandwich(item, menu)
             priced_item = item.model_copy(update={"computed_price": new_price})
             subtotal += new_price
             priced_items.append(priced_item)
-        elif isinstance(item, (DrinkCartItem, WaterCartItem, SauceCartItem, McCafeCartItem)):
+        elif isinstance(item, (DrinkOrderItem, WaterOrderItem, SauceOrderItem, McCafeOrderItem)):
             subtotal += item.price
             priced_items.append(item)
         else:
-            raise ValueError(f"Unknown cart item kind: {item}")
-#decimal.Decimal with ROUND_HALF_UP would be more accurate
+            raise ValueError(f"Unknown order item kind: {item}")
+    # decimal.Decimal with ROUND_HALF_UP would be more accurate
     subtotal = round(subtotal, 2)
     tax = round(subtotal * TAX_RATE, 2)
     total = round(subtotal + tax, 2)
 
-    return Cart(
+    return Order(
         items=priced_items,
         subtotal=subtotal,
         tax=tax,
