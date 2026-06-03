@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
     <title>mcmenumimic — {{ item.name }}</title>
 </head>
 <body>
     <p><a href="/category/sandwiches">&larr; Back to sandwiches</a></p>
     <h1>{{ item.name }}</h1>
+    {% if item.image %}
+        <img class="item-image" src="/static/{{ item.image }}" alt="{{ item.name }}">
+    {% endif %}
     <p>Base price: SR {{ item.price }}</p>
 
     {% if added %}
-        <p><strong>✓ Added to order.</strong> <a href="/order">View order</a> or customize another below.</p>
+        <p class="added-note"><strong>✓ Added to order.</strong> <a href="/order">View order</a> or customize another below.</p>
     {% endif %}
 
     <form method="post" action="/customize/sandwich/{{ item.id }}">
