@@ -27,8 +27,8 @@ load_dotenv(ROOT / "kisoskagentapi.env")
 
 llm = ChatOpenAI(
     api_key=os.getenv("kioskagentapikey"),
-    base_url="https://api.groq.com/openai/v1",
-    model="llama-3.3-70b-versatile",
+    base_url="https://openrouter.ai/api/v1",
+    model="openai/gpt-oss-20b",
     temperature=0.0,  # deterministic for predictable agent behavior
 )
 
@@ -238,7 +238,7 @@ def run_turn(
     history: list,
     order: Order,
     menu: Menu,
-    max_iterations: int = 6,
+    max_iterations: int = 12,
 ) -> tuple[str, list]:
     """Run one user turn through the agent.
 
