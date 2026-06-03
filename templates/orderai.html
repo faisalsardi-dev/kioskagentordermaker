@@ -3,15 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
     <title>mcmenumimic — AI Order</title>
     <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 1rem;
-            line-height: 1.4;
-        }
         .messages {
             display: flex;
             flex-direction: column;
@@ -24,15 +18,17 @@
             max-width: 85%;
         }
         .msg.user {
-            background: #e0e0e0;
+            background: var(--mcd-red);
+            color: #fff;
             align-self: flex-end;
         }
         .msg.assistant {
-            background: #fff7d0;
+            background: var(--mcd-yellow);
+            color: var(--ink);
             align-self: flex-start;
         }
         .empty {
-            color: #777;
+            color: var(--muted);
             font-style: italic;
         }
         form.send {
@@ -41,12 +37,6 @@
         }
         form.send input[type="text"] {
             flex: 1;
-            padding: 0.5rem;
-            font-size: 1rem;
-        }
-        form.send button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
         }
     </style>
 </head>
