@@ -2,7 +2,7 @@
 
 Public entry point: run_turn(user_message, history, order, menu) -> (assistant_text, new_history)
 """
-from openai import RateLimitError
+#from openai import RateLimitError
 import json
 import os
 from pathlib import Path
@@ -256,13 +256,7 @@ def run_turn(
     history = history + [HumanMessage(content=user_message)]
 
     for _ in range(max_iterations):
-        try:
-            response = llm_with_tools.invoke(history)
-        except RateLimitError:
-            return (
-                "I'm currently rate-limited by the LLM service. "
-                "Please try again in a minute."
-            ), history
+        response = llm_with_tools.invoke(history)
         history = history + [response]
 
         if not response.tool_calls:
