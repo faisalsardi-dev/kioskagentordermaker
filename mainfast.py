@@ -1,14 +1,12 @@
 """FastAPI app: kiosk mimic + AI order builder."""
+#uvicorn mainfast:app --reload
 from pathlib import Path
-import json
+import json, uuid
 from totaling import price_order
-from fastapi.responses import HTMLResponse, RedirectResponse
-import uuid
 from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
 from datapydentic import (
     Menu,
     Order,
@@ -18,8 +16,9 @@ from datapydentic import (
     SauceOrderItem,
     McCafeOrderItem,
 )
-
 from llmtools import PENDING_ORDERS, _reap_expired_pending
+
+
 
 ROOT = Path(__file__).parent
 MENU_PATH = ROOT / "mcmenu.json"
