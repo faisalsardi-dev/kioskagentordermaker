@@ -1,0 +1,99 @@
+/* mcmenumimic — kiosk theme
+   Generic fast-food red/yellow palette. Not affiliated with any chain.
+   All colors live here. Change a value once, it changes everywhere. */
+
+:root {
+    --mcd-red: #DA291C;
+    --mcd-yellow: #FFC72C;
+    --ink: #1a1a1a;
+    --paper: #ffffff;
+    --muted: #777777;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.4;
+}
+
+/* Headings sit on the brand red */
+h1 {
+    background: var(--mcd-red);
+    color: var(--paper);
+    padding: 0.6rem 1rem;
+    border-radius: 0.4rem;
+    margin: 0 0 1rem 0;
+}
+
+h2 {
+    color: var(--mcd-red);
+    border-bottom: 3px solid var(--mcd-yellow);
+    padding-bottom: 0.2rem;
+}
+
+/* Links */
+a {
+    color: var(--mcd-red);
+    font-weight: 600;
+}
+a:hover {
+    text-decoration: none;
+}
+
+/* Buttons — yellow with dark ink, the classic kiosk look */
+button {
+    background: var(--mcd-yellow);
+    color: var(--ink);
+    border: 2px solid var(--mcd-red);
+    border-radius: 0.4rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+button:hover {
+    background: var(--mcd-red);
+    color: var(--paper);
+}
+
+/* Inputs */
+input[type="text"],
+input[type="number"] {
+    padding: 0.4rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 0.3rem;
+}
+
+/* A reusable card/panel for landing-page sections */
+.panel {
+    border: 2px solid var(--mcd-yellow);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* The "added to order" confirmation note */
+.added-note {
+    background: var(--mcd-yellow);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+}
+
+/* Sandwich image on the customize page */
+.item-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Error message (bad redemption code) */
+.error {
+    color: var(--mcd-red);
+    font-weight: 700;
+}
