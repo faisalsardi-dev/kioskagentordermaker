@@ -15,3 +15,4 @@ build/
 .ruff_cache/
 .claude/*
 !.claude/settings.json
+kioskorders.db
