@@ -4,7 +4,7 @@ from pathlib import Path
 import json, uuid, secrets
 from datetime import datetime, timedelta, timezone
 from totaling import price_order
-from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form
+from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,7 +18,7 @@ from datapydentic import (
     McCafeOrderItem,
 )
 from llmtools import PENDING_ORDERS, _reap_expired_pending
-from jwtmanager import hash_password, verify_password, create_token, TOKEN_TTL_SECONDS
+from jwtmanager import hash_password, verify_password, create_token, verify_token, TOKEN_TTL_SECONDS
 from emailmanager import send_verification_email
 
 ROOT = Path(__file__).parent
@@ -53,6 +53,20 @@ def get_or_create_session(session_id: str | None) -> tuple[str, list, Order]:
     history, order = SESSIONS[session_id]
     return session_id, history, order
 
+def get_current_user(auth_token: str | None = Cookie(default=None)) -> dict | None:
+    """Resolve the logged-in user from the auth_token cookie.
+
+    Returns the user row (dict) if the cookie holds a valid, unexpired JWT
+    AND the user still exists; otherwise None. Never raises — a missing,
+    malformed, or expired token all collapse to None (treated as anonymous).
+    """
+    if not auth_token:
+        return None
+    email = verify_token(auth_token)
+    if email is None:
+        return None
+    return sqlmanager.get_user(email)
+
 
 def load_menu_dict() -> dict:
     with MENU_PATH.open() as f:
@@ -64,13 +78,17 @@ def load_menu() -> Menu:
 
 
 @app.get("/", response_class=HTMLResponse)
-def landing(request: Request, error: str | None = None):
+def landing(
+    request: Request,
+    error: str | None = None,
+    user: dict | None = Depends(get_current_user),
+):
     error_message = None
     if error == "bad_code":
         error_message = "Code not found or expired. Please try again."
     return templates.TemplateResponse(
         request, "kiosk.html",
-        {"error_message": error_message},
+        {"error_message": error_message, "user": user},
     )
 
 
@@ -508,6 +526,14 @@ def login_post(
         "auth_token", token,
         max_age=TOKEN_TTL_SECONDS, httponly=True,
     )
+    return response
+
+
+@app.post("/logout")
+def logout():
+    """Clear the auth_token cookie and return to the kiosk."""
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("auth_token")
     return response
 
 

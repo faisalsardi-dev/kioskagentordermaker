@@ -41,6 +41,14 @@
 
     <div class="panel">
         <h2>Account</h2>
-        <p><a href="/login">Log in</a> or <a href="/register">create an account</a></p>
+        {% if user %}
+            <p>Logged in as {{ user.nickname or user.email }}</p>
+            <form method="post" action="/logout">
+                <button type="submit">Log out</button>
+            </form>
+        {% else %}
+            <p><a href="/login">Log in</a> or <a href="/register">create an account</a></p>
+        {% endif %}
     </div>
 </body>
+</html>
