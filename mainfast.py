@@ -35,9 +35,23 @@ sqlmanager.init_users_table()
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=ROOT / "templates")
 
-# Single global order. Single-user demo only.
-# Production would key orders by session ID.
-ORDER: Order = Order()
+# Per-session kiosk carts. One Order per browser session, keyed by the
+# session_id cookie (the same key the AI conversations use).
+# Lives in memory; dies on server restart.
+KIOSK_CARTS: dict[str, Order] = {}
+
+
+def get_or_create_cart(session_id: str | None) -> tuple[str, Order]:
+    """Return (session_id, cart). Creates a new cart if none exists.
+
+    Mirrors get_or_create_session, but for the kiosk's tap-through cart.
+    Keyed by the same session_id cookie; login state is orthogonal and
+    does not affect which cart a visitor gets.
+    """
+    if session_id is None or session_id not in KIOSK_CARTS:
+        session_id = str(uuid.uuid4())
+        KIOSK_CARTS[session_id] = Order()
+    return session_id, KIOSK_CARTS[session_id]
 
 # Per-session state for /orderai conversations.
 # Key: session_id (UUID string). Value: (history, order).
@@ -173,7 +187,12 @@ def customize_get(request: Request, kind: str, item_id: str, added: bool = False
 
 
 @app.post("/customize/sandwich/{item_id}", response_class=HTMLResponse)
-async def customize_sandwich_post(request: Request, item_id: str):
+async def customize_sandwich_post(
+    request: Request,
+    item_id: str,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
     menu = load_menu()
     sandwich = next((s for s in menu.sandwiches if s.id == item_id), None)
     if not sandwich:
@@ -191,7 +210,7 @@ async def customize_sandwich_post(request: Request, item_id: str):
     quantity = max(1, int(form.get("quantity", "1")))
 
     for _ in range(quantity):
-        ORDER.items.append(SandwichOrderItem(
+        cart.items.append(SandwichOrderItem(
             item_id=sandwich.id,
             name=sandwich.name,
             base_price=sandwich.price,
@@ -204,7 +223,7 @@ async def customize_sandwich_post(request: Request, item_id: str):
 
     menu_dict = load_menu_dict()
     item_dict = next(s for s in menu_dict["sandwiches"] if s["id"] == item_id)
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "customize_sandwich.html",
         {
             "item": item_dict,
@@ -213,21 +232,30 @@ async def customize_sandwich_post(request: Request, item_id: str):
             "added": True,
         },
     )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.post("/customize/drink/{item_id}", response_class=HTMLResponse)
-async def customize_drink_post(request: Request, item_id: str):
+async def customize_drink_post(
+    request: Request,
+    item_id: str,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
     menu = load_menu()
     form = await request.form()
     quantity = max(1, int(form.get("quantity", "1")))
 
     if item_id == menu.water.id:
         for _ in range(quantity):
-            ORDER.items.append(WaterOrderItem(price=menu.water.price))
-        return templates.TemplateResponse(
+            cart.items.append(WaterOrderItem(price=menu.water.price))
+        response = templates.TemplateResponse(
             request, "customize_water.html",
             {"item": menu.water.model_dump(), "added": True},
         )
+        response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+        return response
 
     drink_type = next((d for d in menu.drink_types if d.id == item_id), None)
     if not drink_type:
@@ -239,7 +267,7 @@ async def customize_drink_post(request: Request, item_id: str):
         raise HTTPException(400, f"Invalid drink size: {size_id}")
 
     for _ in range(quantity):
-        ORDER.items.append(DrinkOrderItem(
+        cart.items.append(DrinkOrderItem(
             drink_type_id=drink_type.id,
             name=drink_type.name,
             size_id=size.id,
@@ -249,14 +277,21 @@ async def customize_drink_post(request: Request, item_id: str):
 
     menu_dict = load_menu_dict()
     item_dict = next(d for d in menu_dict["drink_types"] if d["id"] == item_id)
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "customize_drink.html",
         {"item": item_dict, "drink_sizes": menu_dict["drink_sizes"], "added": True},
     )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.post("/customize/sauce/{item_id}", response_class=HTMLResponse)
-async def customize_sauce_post(request: Request, item_id: str):
+async def customize_sauce_post(
+    request: Request,
+    item_id: str,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
     menu = load_menu()
     sauce = next((s for s in menu.sauces if s.id == item_id), None)
     if not sauce:
@@ -266,20 +301,27 @@ async def customize_sauce_post(request: Request, item_id: str):
     quantity = max(1, int(form.get("quantity", "1")))
 
     for _ in range(quantity):
-        ORDER.items.append(SauceOrderItem(
+        cart.items.append(SauceOrderItem(
             sauce_id=sauce.id,
             name=sauce.name,
             price=sauce.price,
         ))
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "customize_sauce.html",
         {"item": sauce.model_dump(), "added": True},
     )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.post("/customize/mccafe/{item_id}", response_class=HTMLResponse)
-async def customize_mccafe_post(request: Request, item_id: str):
+async def customize_mccafe_post(
+    request: Request,
+    item_id: str,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
     menu = load_menu()
     mccafe = next((m for m in menu.mccafe if m.id == item_id), None)
     if not mccafe:
@@ -289,16 +331,18 @@ async def customize_mccafe_post(request: Request, item_id: str):
     quantity = max(1, int(form.get("quantity", "1")))
 
     for _ in range(quantity):
-        ORDER.items.append(McCafeOrderItem(
+        cart.items.append(McCafeOrderItem(
             item_id=mccafe.id,
             name=mccafe.name,
             price=mccafe.price,
         ))
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "customize_mccafe.html",
         {"item": mccafe.model_dump(), "added": True},
     )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.get("/api/menu")
@@ -307,31 +351,47 @@ def get_menu() -> dict:
 
 
 @app.get("/api/order")
-def get_order() -> Order:
-    return ORDER
+def get_order(session_id: str | None = Cookie(default=None)) -> Order:
+    session_id, cart = get_or_create_cart(session_id)
+    return cart
 
 
 @app.get("/order", response_class=HTMLResponse)
-def order_page(request: Request):
+def order_page(
+    request: Request,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
     menu = load_menu()
-    priced = price_order(ORDER, menu)
-    return templates.TemplateResponse(
+    priced = price_order(cart, menu)
+    response = templates.TemplateResponse(
         request, "order.html",
         {"order": priced},
     )
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.post("/order/remove/{index}")
-def order_remove(index: int):
-    if 0 <= index < len(ORDER.items):
-        ORDER.items.pop(index)
-    return RedirectResponse(url="/order", status_code=303)
+def order_remove(
+    index: int,
+    session_id: str | None = Cookie(default=None),
+):
+    session_id, cart = get_or_create_cart(session_id)
+    if 0 <= index < len(cart.items):
+        cart.items.pop(index)
+    response = RedirectResponse(url="/order", status_code=303)
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.post("/order/reset")
-def order_reset():
-    ORDER.items.clear()
-    return RedirectResponse(url="/order", status_code=303)
+def order_reset(session_id: str | None = Cookie(default=None)):
+    session_id, cart = get_or_create_cart(session_id)
+    cart.items.clear()
+    response = RedirectResponse(url="/order", status_code=303)
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 
 @app.get("/orderai", response_class=HTMLResponse)
@@ -401,7 +461,10 @@ def orderai_reset(session_id: str | None = Cookie(default=None)):
 
 
 @app.post("/redeem")
-def redeem(code: str = Form(...)):
+def redeem(
+    code: str = Form(...),
+    session_id: str | None = Cookie(default=None),
+):
     """Redeem a 4-hex AI-built order code into the kiosk's ORDER."""
     code = code.strip().upper()
     _reap_expired_pending()
@@ -414,12 +477,15 @@ def redeem(code: str = Form(...)):
     # Replace kiosk order with the redeemed items (deep copy preserves
     # pending until we delete it, in case something fails between here
     # and the del).
-    ORDER.items.clear()
+    session_id, cart = get_or_create_cart(session_id)
+    cart.items.clear()
     for item in pending_order.items:
-        ORDER.items.append(item.model_copy(deep=True))
+        cart.items.append(item.model_copy(deep=True))
     sqlmanager.mark_redeemed(code)
     del PENDING_ORDERS[code]
-    return RedirectResponse(url="/order", status_code=303)
+    response = RedirectResponse(url="/order", status_code=303)
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
 
 @app.get("/register", response_class=HTMLResponse)
 def register_get(request: Request):
