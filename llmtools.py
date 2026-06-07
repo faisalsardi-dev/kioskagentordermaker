@@ -269,6 +269,9 @@ def finalize_order(order: Order, menu: Menu) -> str:
     code = _generate_unique_code()
     expires_at = time.time() + CODE_TTL_SECONDS
     PENDING_ORDERS[code] = (snapshot, expires_at)
+    import sqlmanager
+    sqlmanager.stamp_code(code)
+    
 
     # Clear the session's order in place so the agent has a fresh slate.
     order.items.clear()

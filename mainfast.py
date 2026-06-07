@@ -27,6 +27,8 @@ app = FastAPI(
     title="mcmenumimic",
     description="A McDonald's-style self-service kiosk with optional AI order builder.",
 )
+import sqlmanager
+sqlmanager.init_db()
 
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=ROOT / "templates")
@@ -349,8 +351,20 @@ async def orderai_message(
 
     if user_message:
         menu = load_menu()
-        _, new_history = run_turn(user_message, history, order, menu)
+        assistant_text, new_history, metrics = run_turn(user_message, history, order, menu)
         SESSIONS[session_id] = (new_history, order)
+        if metrics["is_readback"]:
+            from totaling import price_order
+            priced = price_order(order, menu)
+            sqlmanager.insert_readback(
+                user_message=user_message,
+                assistant_reply=assistant_text,
+                order_json=priced.model_dump_json(),
+                prompt_tokens=metrics["prompt_tokens"],
+                completion_tokens=metrics["completion_tokens"],
+                loop_count=metrics["loop_count"],
+                wall_clock_ms=metrics["wall_clock_ms"],
+            )
 
     response = RedirectResponse(url="/orderai", status_code=303)
     response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
@@ -383,6 +397,6 @@ def redeem(code: str = Form(...)):
     ORDER.items.clear()
     for item in pending_order.items:
         ORDER.items.append(item.model_copy(deep=True))
-
+    sqlmanager.mark_redeemed(code)
     del PENDING_ORDERS[code]
     return RedirectResponse(url="/order", status_code=303)
