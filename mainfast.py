@@ -454,4 +454,52 @@ def verify_post(
         {"email": email, "error_message": "Code is incorrect or has expired."},
     )
 
+@app.get("/login", response_class=HTMLResponse)
+def login_get(request: Request, verified: str = ""):
+    return templates.TemplateResponse(
+        request, "login.html", {"verified": verified},
+    )
+
+
+@app.post("/login")
+def login_post(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+):
+    email = email.strip().lower()
+    user = sqlmanager.get_user(email)
+
+    # Generic failure message for BOTH "no such user" and "wrong password" —
+    # never leak which field was wrong (enumeration defense, same spirit as
+    # /register). Re-render in place with the email preserved.
+    def _fail():
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"email": email, "error_message": "Invalid email or password."},
+        )
+
+    if user is None:
+        return _fail()
+
+    # The gate: unverified accounts cannot log in, even with correct password.
+    if user["email_verified"] == 0:
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"email": email,
+             "error_message": "Please verify your email before logging in."},
+        )
+
+    if not verify_password(password, user["password_hash"]):
+        return _fail()
+
+    # Success: mint JWT, set it as a SEPARATE cookie (auth_token), never
+    # merged with session_id. Land on / per the locked decision.
+    token = create_token(email)
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(
+        "auth_token", token,
+        max_age=TOKEN_TTL_SECONDS, httponly=True,
+    )
+    return response
 
