@@ -488,6 +488,7 @@ def redeem(
     response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
     return response
 
+
 @app.get("/register", response_class=HTMLResponse)
 def register_get(request: Request):
     return templates.TemplateResponse(request, "register.html", {})

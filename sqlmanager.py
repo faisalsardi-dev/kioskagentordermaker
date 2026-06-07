@@ -156,6 +156,31 @@ def mark_redeemed(code: str, user_email: str | None = None) -> bool:
     finally:
         conn.close()
 
+
+def get_last_redeemed_order(user_email: str) -> dict | None:
+    """Return this user's most recent redeemed order, or None.
+
+    "Last order" = the newest row attributable to the user (user_email set)
+    that actually reached redemption (redeemed='true'). Built-but-abandoned
+    orders don't count. Returns the row as a dict (order_json is still a
+    JSON string — the caller parses it); None if the user has none.
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT * FROM orders
+            WHERE user_email = ? AND redeemed = 'true'
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_email,),
+        ).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
 def set_flag(row_id: int, value: str | None) -> bool:
     """Set (or clear) the freeform flag on a row by id.
 
