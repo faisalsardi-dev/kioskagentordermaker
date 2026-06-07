@@ -190,21 +190,35 @@ def init_users_table() -> None:
 
 
 def create_user(
-    email: str, password_hash: str, nickname: str | None = None
+    email: str,
+    password_hash: str,
+    nickname: str | None = None,
+    verification_code: str | None = None,
+    code_expires_at: str | None = None,
 ) -> bool:
     """Insert a new user. Returns True on success.
 
     Returns False (does not raise) if the email already exists.
+    `verification_code` / `code_expires_at` are written as-is; the caller
+    (the route) generates them and owns their format/TTL policy.
     """
     conn = get_connection()
     try:
         conn.execute(
             """
             INSERT INTO users (
-                email, password_hash, nickname, created_at, email_verified
-            ) VALUES (?, ?, ?, ?, 0)
+                email, password_hash, nickname, created_at, email_verified,
+                verification_code, code_expires_at
+            ) VALUES (?, ?, ?, ?, 0, ?, ?)
             """,
-            (email, password_hash, nickname, _now_iso()),
+            (
+                email,
+                password_hash,
+                nickname,
+                _now_iso(),
+                verification_code,
+                code_expires_at,
+            ),
         )
         conn.commit()
         return True
@@ -223,5 +237,46 @@ def get_user(email: str) -> dict | None:
             (email,),
         ).fetchone()
         return dict(row) if row is not None else None
+    finally:
+        conn.close()
+    
+
+def verify_user(email: str, code: str) -> bool:
+    """Verify a user's email by matching the stored 6-digit code.
+
+    Returns True only if: the user exists, has a stored verification_code
+    equal to `code`, and code_expires_at is still in the future. On success,
+    sets email_verified=1 and clears the code columns. Any failure -> False.
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT verification_code, code_expires_at FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+
+        if row is None:
+            return False
+        stored_code = row["verification_code"]
+        expires_at = row["code_expires_at"]
+        if not stored_code or not expires_at:
+            return False
+        if stored_code != code:
+            return False
+        if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+            return False
+
+        conn.execute(
+            """
+            UPDATE users
+            SET email_verified = 1,
+                verification_code = NULL,
+                code_expires_at = NULL
+            WHERE email = ?
+            """,
+            (email,),
+        )
+        conn.commit()
+        return True
     finally:
         conn.close()
