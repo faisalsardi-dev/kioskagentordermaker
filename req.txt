@@ -5,3 +5,5 @@ uvicorn[standard]
 jinja2
 python-multipart
 langchain
+argon2-cffi
+PyJWT

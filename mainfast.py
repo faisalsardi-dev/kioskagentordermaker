@@ -29,6 +29,7 @@ app = FastAPI(
 )
 import sqlmanager
 sqlmanager.init_db()
+sqlmanager.init_users_table()
 
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=ROOT / "templates")

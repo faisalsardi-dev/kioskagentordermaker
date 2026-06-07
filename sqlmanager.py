@@ -165,3 +165,63 @@ def set_flag(row_id: int, value: str | None) -> bool:
         return cur.rowcount > 0
     finally:
         conn.close()
+
+
+def init_users_table() -> None:
+    """Create the users table if it doesn't exist. Safe to call on startup."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                email             TEXT PRIMARY KEY,
+                password_hash     TEXT NOT NULL,
+                nickname          TEXT,
+                created_at        TEXT NOT NULL,
+                email_verified    INTEGER NOT NULL DEFAULT 0,
+                verification_code TEXT,
+                code_expires_at   TEXT
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def create_user(
+    email: str, password_hash: str, nickname: str | None = None
+) -> bool:
+    """Insert a new user. Returns True on success.
+
+    Returns False (does not raise) if the email already exists.
+    """
+    conn = get_connection()
+    try:
+        conn.execute(
+            """
+            INSERT INTO users (
+                email, password_hash, nickname, created_at, email_verified
+            ) VALUES (?, ?, ?, ?, 0)
+            """,
+            (email, password_hash, nickname, _now_iso()),
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+
+def get_user(email: str) -> dict | None:
+    """Look up a user by email. Returns the row as a dict, or None."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
