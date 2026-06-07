@@ -131,18 +131,26 @@ def stamp_code(code: str) -> bool:
         conn.close()
 
 
-def mark_redeemed(code: str) -> bool:
+def mark_redeemed(code: str, user_email: str | None = None) -> bool:
     """Flip redeemed to 'true' for the row carrying this code.
 
-    Called by /redeem when a code is successfully plugged in at the landing
-    page. Returns True if a matching row was updated.
+    If user_email is given (a logged-in user redeemed), also stamp it on the
+    row — this is the moment an order becomes attributable to a user, which
+    is what "your last order" reads back. Anonymous redeems pass None and
+    leave user_email untouched. Returns True if a matching row was updated.
     """
     conn = get_connection()
     try:
-        cur = conn.execute(
-            "UPDATE orders SET redeemed = 'true' WHERE code = ?",
-            (code,),
-        )
+        if user_email is None:
+            cur = conn.execute(
+                "UPDATE orders SET redeemed = 'true' WHERE code = ?",
+                (code,),
+            )
+        else:
+            cur = conn.execute(
+                "UPDATE orders SET redeemed = 'true', user_email = ? WHERE code = ?",
+                (user_email, code),
+            )
         conn.commit()
         return cur.rowcount > 0
     finally:

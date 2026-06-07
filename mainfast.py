@@ -464,6 +464,7 @@ def orderai_reset(session_id: str | None = Cookie(default=None)):
 def redeem(
     code: str = Form(...),
     session_id: str | None = Cookie(default=None),
+    user: dict | None = Depends(get_current_user),
 ):
     """Redeem a 4-hex AI-built order code into the kiosk's ORDER."""
     code = code.strip().upper()
@@ -481,7 +482,7 @@ def redeem(
     cart.items.clear()
     for item in pending_order.items:
         cart.items.append(item.model_copy(deep=True))
-    sqlmanager.mark_redeemed(code)
+    sqlmanager.mark_redeemed(code, user_email=user["email"] if user else None)
     del PENDING_ORDERS[code]
     response = RedirectResponse(url="/order", status_code=303)
     response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
