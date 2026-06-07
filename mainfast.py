@@ -100,9 +100,26 @@ def landing(
     error_message = None
     if error == "bad_code":
         error_message = "Code not found or expired. Please try again."
+
+    # Welcome-back: if logged in and they have a past redeemed order,
+    # reconstruct it and render the same summary the AI readback uses
+    # (view_order), so the wording stays consistent across the app.
+    last_order_summary = None
+    if user is not None:
+        row = sqlmanager.get_last_redeemed_order(user["email"])
+        if row is not None:
+            from llmtools import view_order
+            from datapydentic import Order
+            past_order = Order.model_validate_json(row["order_json"])
+            last_order_summary = view_order(past_order, load_menu())
+
     return templates.TemplateResponse(
         request, "kiosk.html",
-        {"error_message": error_message, "user": user},
+        {
+            "error_message": error_message,
+            "user": user,
+            "last_order_summary": last_order_summary,
+        },
     )
 
 
@@ -603,6 +620,33 @@ def logout():
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("auth_token")
     return response
+
+
+@app.post("/reorder")
+def reorder(
+    session_id: str | None = Cookie(default=None),
+    user: dict | None = Depends(get_current_user),
+):
+    """Load the logged-in user's last redeemed order into their cart."""
+    if user is None:
+        return RedirectResponse(url="/", status_code=303)
+
+    row = sqlmanager.get_last_redeemed_order(user["email"])
+    if row is None:
+        return RedirectResponse(url="/", status_code=303)
+
+    past_order = Order.model_validate_json(row["order_json"])
+
+    session_id, cart = get_or_create_cart(session_id)
+    # Replace (not append) — matches /redeem and avoids surprise stacking.
+    cart.items.clear()
+    for item in past_order.items:
+        cart.items.append(item.model_copy(deep=True))
+
+    response = RedirectResponse(url="/order", status_code=303)
+    response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
+    return response
+
 
 
 

@@ -9,6 +9,18 @@
 <body>
     <h1>mcmenumimic</h1>
 
+    {% if user and last_order_summary %}
+    <div class="panel">
+        <h2>Welcome back, {{ user.nickname or user.email }}</h2>
+        <p>Want your last order again?</p>
+        <pre style="white-space: pre-wrap; font-family: inherit;">{{ last_order_summary }}</pre>
+        <form method="post" action="/reorder" style="display:inline">
+            <button type="submit">Same as last time</button>
+        </form>
+        <a href="/category/sandwiches"><button type="button">Something new</button></a>
+    </div>
+    {% endif %}
+
     <div class="panel">
         <h2>Browse the menu</h2>
         <ul>
