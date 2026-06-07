@@ -436,3 +436,22 @@ def register_post(
             send_verification_email(email, code)
 
     return RedirectResponse(url=f"/verify?email={email}", status_code=303)
+
+@app.post("/verify")
+def verify_post(
+    request: Request,
+    email: str = Form(...),
+    code: str = Form(...),
+):
+    email = email.strip().lower()
+    code = code.strip()
+
+    if sqlmanager.verify_user(email, code):
+        return RedirectResponse(url="/login?verified=1", status_code=303)
+
+    return templates.TemplateResponse(
+        request, "verify.html",
+        {"email": email, "error_message": "Code is incorrect or has expired."},
+    )
+
+
