@@ -4,6 +4,7 @@ Public entry point: run_turn(user_message, history, order, menu) -> (assistant_t
 """
 #from openai import RateLimitError
 import json
+import time
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -233,21 +234,28 @@ Always be brief and friendly. Don't over-narrate your tool use.
 # ---------- The agent loop ----------
 
 
+
 def run_turn(
     user_message: str,
     history: list,
     order: Order,
     menu: Menu,
     max_iterations: int = 12,
-) -> tuple[str, list]:
+) -> tuple[str, list, dict]:
     """Run one user turn through the agent.
 
-    Returns (assistant_text, new_history). History is the full message list
-    you pass back on the next turn to keep the conversation going.
+    Returns (assistant_text, new_history, metrics). History is the full
+    message list you pass back on the next turn to keep the conversation going.
     """
     global _current_order, _current_menu
     _current_order = order
     _current_menu = menu
+
+    start = time.monotonic()
+    prompt_tokens = 0
+    completion_tokens = 0
+    loop_count = 0
+    view_order_calls = 0
 
     # On the very first turn, prepend the system message.
     if not history:
@@ -257,15 +265,28 @@ def run_turn(
 
     for _ in range(max_iterations):
         response = llm_with_tools.invoke(history)
+        loop_count += 1
+        usage = getattr(response, "usage_metadata", None) or {}
+        prompt_tokens += usage.get("input_tokens", 0)
+        completion_tokens += usage.get("output_tokens", 0)
         history = history + [response]
 
         if not response.tool_calls:
             # Plain text reply — turn is done.
-            return response.content, history
+            metrics = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "loop_count": loop_count,
+                "wall_clock_ms": int((time.monotonic() - start) * 1000),
+                "is_readback": view_order_calls > 0,
+            }
+            return response.content, history, metrics
 
         # Execute every tool call the LLM emitted.
         for tool_call in response.tool_calls:
             name = tool_call["name"]
+            if name == "view_order":
+                view_order_calls += 1
             args = tool_call["args"]
             tool_fn = TOOLS_BY_NAME.get(name)
             if not tool_fn:
@@ -278,4 +299,11 @@ def run_turn(
             history = history + [ToolMessage(content=str(result), tool_call_id=tool_call["id"])]
 
     # Safety: ran too many loops, return a fallback.
-    return "I got stuck. Could you rephrase what you'd like to order?", history
+    metrics = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "loop_count": loop_count,
+        "wall_clock_ms": int((time.monotonic() - start) * 1000),
+        "is_readback": False,
+    }
+    return "I got stuck. Could you rephrase what you'd like to order?", history, metrics
