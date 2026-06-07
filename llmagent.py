@@ -28,7 +28,7 @@ load_dotenv(ROOT / "kisoskagentapi.env")
 llm = ChatOpenAI(
     api_key=os.getenv("kioskagentapikey"),
     base_url="https://openrouter.ai/api/v1",
-    model="openai/gpt-oss-20b",
+    model="openai/gpt-oss-120b",
     temperature=0.0,  # deterministic for predictable agent behavior
 )
 

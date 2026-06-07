@@ -1,0 +1,57 @@
+"Can I get a McChicken Spicy"
+Kiosk: Your order currently has: - McChicken Spicy (default ingredients) – SR 19.0 Subtotal: SR 19.0 Tax (15%): SR 2.85 Total: SR 21.85 Should I lock this in? (yes/no)
+#
+one large coke zero
+Kiosk: You have a Large Coke Zero (SR 5.5). Should I lock this in? (yes/no)
+#
+"just a water please"
+Kiosk: Your order so far: - Water – SR 2.0 Subtotal: SR 2.0 Tax (15%): SR 0.3 Total: SR 2.3 Should I lock this in? (yes/no)
+#
+McRoyale with extra cheese and no pickle"
+Kiosk: Your order so far: - McRoyale (extra cheese, no pickle) Subtotal: SR 21.5 Tax (15%): SR 3.23 Total: SR 24.73 Should I lock this in? (yes/no)
+#
+"quarter pounder, extra extra cheese, hold the onion"
+Kiosk: Here’s the current order: - Quarter Pounder with **4 × cheese** and **no onion** (defaults applied for everything else). Subtotal: **SR 22.0** Tax (15%): **SR 3.3** **Total: SR 25.3** Should I lock this in? (yes/no)
+# mcchicken spicy with tomato
+Kiosk: Your order is: - McChicken Spicy with extra tomato (default ingredients otherwise) – SR 19.0 Subtotal: SR 19.0 Tax (15%): SR 2.85 Total: SR 21.85 Should I lock this in? (yes/no)
+#
+You: mcroyale meal, large, with a sprite zero
+Kiosk: Your order is a **McRoyale** as a **large meal** with a **Sprite Zero**. No ingredient changes were requested. Should I lock this in? (yes/no)
+You: can I make that quarter pounder a medium meal
+Kiosk: Sure! I’ll replace the McRoyale with a Quarter Pounder medium meal. Which drink would you like with it (e.g., Coke Zero, Sprite Regular, etc.)?
+#
+You: two mcchicken spicy and a bbq sauce
+Kiosk: Your order currently includes: - 2 × McChicken Spicy (default ingredients) - BBQ Sauce Subtotal = SR 40.0 Tax = SR 6.0 Total = SR 46.0 Should I lock this in? (yes/no)
+#
+You: mcroyale meal large with coke zero, a side of mac big sauce, and a latte
+Kiosk: Here’s what I have so far: - **McRoyale** as a **large meal** with **Coke Zero** (standard ingredients) - **Mac Big Sauce** (side) - **Latte** (McCafé) The total comes to **SR 44.85**. Should I lock this in? (yes/no)
+#
+You: give me 6 bbq sauces
+Kiosk: Added 6 BBQ sauces to your order. Let me know if you’d like anything else or want to finalize your order!
+#
+You: how much is a mcroyale meal
+Kiosk: The McRoyale sandwich itself costs **$20.00**. If you add it to a **meal**, you’ll also pay for the chosen meal size and the drink: | Meal size | Price | |-----------|-------| | Small (S) | $5.00 | | Medium (M) | $7.00 | | Large (L) | $9.00 | **Drinks** (stand‑alone, not part of a combo) are priced as follows: | Size | Price | |------|-------| | Small (S) | $4.00 | | Medium (M) | $5.00 | | Large (L) | $5.50 | So a full McRoyale meal would be: * **Small meal** (sandwich + small size + small drink): **$20 + $5 + $4 = $29** * **Medium meal** (sandwich + medium size + medium drink): **$20 + $7 + $5 = $32** * **Large meal** (sandwich + large size + large drink): **$20 + $9 + $5.50 = $34.50** Let me know which size and drink you’d like, and I can add it to your order!
+#
+You: what time do you close
+Kiosk: Sorry, I can only help with building your order from the restaurant.
+#
+You: I want 7 cheese on my quarter pounder
+Kiosk: Sorry, the maximum is 5 cheese slices. Would you like to set it to 5 or change something else?
+#
+You: ill have two quarter pounder meals only cheese extra cheese medium size for the drinks one zero coke and the other a spirtite. and extra latte on the side
+Kiosk: You’d like: - 2 Quarter Pounder meals, each with extra cheese (cheese = 3) - Medium drinks: one Coke Zero and one Sprite - A latte on the side What size (Small, Medium, or Large) would you like for the meal sides (fries) for each Quarter Pounder?
+You: for the quarter pounders i want them to be only cheese+extra cheese, both size medium
+Kiosk: Here’s what I have so far: - 2 Quarter Pounder meals, medium size, each with **extra cheese** (cheese = 3) • One with a Coke Zero • One with a Sprite - A latte on the side The total comes to **SR 72.45**. Should I lock this in? (yes/no)
+You: no the sandwitches should have nothing but cheese. also cancel the latte and finilize the order
+Kiosk: Here’s the current order: - 2 Quarter Pounder meals, **Medium** size • Each has the default beef patty and cheese (2 slices) – no other toppings (no pickle, no onion, no ketchup, no tomato, no lettuce) • One comes with a **Coke Zero**, the other with a **Sprite** **Total:** SR 59.80 (including tax) Should I lock this in? (yes/no)
+You: i want both to have extra cheeses. the sandwitch should be (only cheese extra cheese) add the latte back and finilize order
+Kiosk: Your order is now: - 2 Quarter Pounder meals, **Medium** size • Each with **extra cheese** (cheese = 3) and no other toppings (no pickle, onion, ketchup, tomato, lettuce) • One with a **Coke Zero**, the other with a **Sprite** - A **latte** on the side **Total:** SR 72.45 (including tax) I’ll go ahead and lock this in for you.
+You: ok conifrm the order
+Kiosk: Your order is locked in! 🎉 Pickup code: **B586** – show this at the kiosk within 60 seconds. Total: **SR 72.45**. If you’d like anything else, just let me know and we can start a new order.
+
+################################################################################################################################################################################################
+observatopn:
+1-sometimes it anoounces the price some times it dont.
+2-when asked for the menu it prensents in dollar. but not when it uses view_order tool this issue seems to be exclusive to when prompted about the menu rather than the order
+3- sauce cap at 5 hallucinatino issue was fixed seems to be a previous model issue
+4- on order number 15 it should have asked for an exlplicit yes/no before finilizing order
