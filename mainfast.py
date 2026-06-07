@@ -437,6 +437,13 @@ def register_post(
 
     return RedirectResponse(url=f"/verify?email={email}", status_code=303)
 
+
+@app.get("/verify", response_class=HTMLResponse)
+def verify_get(request: Request, email: str = ""):
+    return templates.TemplateResponse(
+        request, "verify.html", {"email": email},
+    )
+
 @app.post("/verify")
 def verify_post(
     request: Request,
@@ -502,4 +509,6 @@ def login_post(
         max_age=TOKEN_TTL_SECONDS, httponly=True,
     )
     return response
+
+
 

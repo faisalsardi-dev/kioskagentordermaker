@@ -16,3 +16,4 @@ build/
 .claude/*
 !.claude/settings.json
 kioskorders.db
+gitdiff.txt
