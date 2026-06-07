@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>mcmenumimic — Register</title>
+</head>
+<body>
+    <p><a href="/">&larr; Back to kiosk</a></p>
+    <h1>Create an account</h1>
+
+    <div class="panel">
+        <form method="post" action="/register">
+            <p>
+                <label>Email<br>
+                    <input type="email" name="email" autocomplete="off" required>
+                </label>
+            </p>
+            <p>
+                <label>Password<br>
+                    <input type="password" name="password" required>
+                </label>
+            </p>
+            <p>
+                <label>Nickname (optional)<br>
+                    <input type="text" name="nickname" autocomplete="off">
+                </label>
+            </p>
+            <button type="submit">Register</button>
+        </form>
+        <p>Already have an account? <a href="/login">Log in</a></p>
+    </div>
+</body>
+</html>
