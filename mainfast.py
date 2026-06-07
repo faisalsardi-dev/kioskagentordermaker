@@ -1,7 +1,8 @@
 """FastAPI app: kiosk mimic + AI order builder."""
 #uvicorn mainfast:app --reload
 from pathlib import Path
-import json, uuid
+import json, uuid, secrets
+from datetime import datetime, timedelta, timezone
 from totaling import price_order
 from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -17,8 +18,8 @@ from datapydentic import (
     McCafeOrderItem,
 )
 from llmtools import PENDING_ORDERS, _reap_expired_pending
-
-
+from jwtmanager import hash_password, verify_password, create_token, TOKEN_TTL_SECONDS
+from emailmanager import send_verification_email
 
 ROOT = Path(__file__).parent
 MENU_PATH = ROOT / "mcmenu.json"
@@ -401,3 +402,37 @@ def redeem(code: str = Form(...)):
     sqlmanager.mark_redeemed(code)
     del PENDING_ORDERS[code]
     return RedirectResponse(url="/order", status_code=303)
+
+@app.get("/register", response_class=HTMLResponse)
+def register_get(request: Request):
+    return templates.TemplateResponse(request, "register.html", {})
+
+
+@app.post("/register")
+def register_post(
+    email: str = Form(...),
+    password: str = Form(...),
+    nickname: str | None = Form(default=None),
+):
+    email = email.strip().lower()
+
+    # Enumeration-safe: if the email already exists (verified or not), we do
+    # NOT reveal that. We skip all work and redirect exactly as if it were a
+    # fresh signup. The real new-user path below writes a row + sends a code;
+    # the probe path silently no-ops into the same redirect.
+    if sqlmanager.get_user(email) is None:
+        password_hash = hash_password(password)
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        # create_user can still return False on a race; we ignore the result
+        # for the same enumeration reason and fall through to the redirect.
+        if sqlmanager.create_user(
+            email,
+            password_hash,
+            nickname,
+            verification_code=code,
+            code_expires_at=expires_at,
+        ):
+            send_verification_email(email, code)
+
+    return RedirectResponse(url=f"/verify?email={email}", status_code=303)
