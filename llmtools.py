@@ -240,6 +240,53 @@ def view_order(order: Order, menu: Menu) -> str:
     return "\n".join(lines)
 
 
+def summarize_order_for_customer(order: Order, menu: Menu) -> str:
+    """Customer-facing order summary: no indices, no price block.
+
+    Mirrors view_order's ingredient-deviation wording (no/extra/Nx) but
+    drops the LLM-oriented '0:/1:' indices and the Subtotal/Tax/Total dump.
+    view_order stays the source of truth for the agent (its index format
+    is load-bearing for remove_item); this is for UI display only.
+    """
+    if not order.items:
+        return "Order is empty."
+
+    priced = price_order(order, menu)
+    lines = []
+    for item in priced.items:
+        if item.kind == "sandwich":
+            sandwich = _find_sandwich(menu, item.item_id)
+            default_map = {ing.id: ing.default for ing in sandwich.ingredients}
+            deviations = []
+            for ing in sandwich.ingredients:  # menu order, not dict order
+                count = item.ingredients.get(ing.id, ing.default)
+                if count == default_map[ing.id]:
+                    continue
+                if count == 0:
+                    deviations.append(f"no {ing.name.lower()}")
+                elif count == default_map[ing.id] + 1:
+                    deviations.append(f"extra {ing.name.lower()}")
+                else:
+                    deviations.append(f"{count}x {ing.name.lower()}")
+            mods_str = ", ".join(deviations) if deviations else "as default"
+            meal_str = ""
+            if item.is_meal:
+                size = _find_meal_size(menu, item.meal_size_id)
+                drink = _find_drink_type(menu, item.meal_drink_type_id)
+                meal_str = f" ({size.name} meal, {drink.name})"
+            lines.append(f"{item.name}{meal_str} ({mods_str})")
+        elif item.kind == "drink":
+            lines.append(f"{item.size_name} {item.name}")
+        elif item.kind == "water":
+            lines.append(item.name)
+        elif item.kind == "sauce":
+            lines.append(item.name)
+        elif item.kind == "mccafe":
+            lines.append(item.name)
+
+    return "\n".join(lines)
+
+
 def remove_item(order: Order, index: int) -> str:
     """Remove the item at the given 0-based index from the order."""
     if index < 0 or index >= len(order.items):

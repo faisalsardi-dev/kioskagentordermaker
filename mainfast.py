@@ -108,10 +108,10 @@ def landing(
     if user is not None:
         row = sqlmanager.get_last_redeemed_order(user["email"])
         if row is not None:
-            from llmtools import view_order
+            from llmtools import summarize_order_for_customer
             from datapydentic import Order
             past_order = Order.model_validate_json(row["order_json"])
-            last_order_summary = view_order(past_order, load_menu())
+            last_order_summary = summarize_order_for_customer(past_order, load_menu())
 
     return templates.TemplateResponse(
         request, "kiosk.html",
