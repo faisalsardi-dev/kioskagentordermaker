@@ -450,7 +450,12 @@ async def orderai_message(
         menu = load_menu()
         assistant_text, new_history, metrics = run_turn(user_message, history, order, menu)
         SESSIONS[session_id] = (new_history, order)
-        if metrics["is_readback"]:
+        flag = None
+        if assistant_text == "Sorry, I can only help with building your order from the restaurant.":
+            flag = "out_of_scope"
+        elif assistant_text.startswith("Sorry, the maximum for any ingredient is 5."):
+            flag = "over_max"
+        if metrics["is_readback"] or flag:
             from totaling import price_order
             priced = price_order(order, menu)
             sqlmanager.insert_readback(
@@ -461,6 +466,7 @@ async def orderai_message(
                 completion_tokens=metrics["completion_tokens"],
                 loop_count=metrics["loop_count"],
                 wall_clock_ms=metrics["wall_clock_ms"],
+                flag=flag,
             )
 
     response = RedirectResponse(url="/orderai", status_code=303)

@@ -70,6 +70,7 @@ def insert_readback(
     loop_count: int,
     wall_clock_ms: int,
     user_email: str | None = None,
+    flag: str | None = None,
 ) -> int:
     """Write one readback row. Returns the new row id.
 
@@ -83,8 +84,8 @@ def insert_readback(
             INSERT INTO orders (
                 created_at, user_message, assistant_reply, order_json,
                 prompt_tokens, completion_tokens, loop_count, wall_clock_ms,
-                code, redeemed, user_email
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'unassigned', ?)
+                code, redeemed, user_email, FLAG
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'unassigned', ?, ?)
             """,
             (
                 _now_iso(),
@@ -96,6 +97,7 @@ def insert_readback(
                 loop_count,
                 wall_clock_ms,
                 user_email,
+                flag,
             ),
         )
         conn.commit()
