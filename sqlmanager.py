@@ -15,11 +15,12 @@ All timestamps are ISO-8601 strings (SQLite has no native datetime type;
 ISO strings sort chronologically and are unambiguous).
 """
 
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "kioskorders.db"
+DB_PATH = Path(os.getenv("KIOSK_DB_PATH", str(Path(__file__).parent / "kioskorders.db")))
 
 
 def _now_iso() -> str:
