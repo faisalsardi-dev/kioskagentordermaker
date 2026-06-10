@@ -453,7 +453,7 @@ async def orderai_message(
         flag = None
         if assistant_text == "Sorry, I can only help with building your order from the restaurant.":
             flag = "out_of_scope"
-        elif assistant_text.startswith("Sorry, the maximum for any ingredient is 5."):
+        elif assistant_text.startswith("Sorry, the maximum"):
             flag = "over_max"
         if metrics["is_readback"] or flag:
             from totaling import price_order
