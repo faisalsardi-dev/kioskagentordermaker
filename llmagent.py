@@ -164,6 +164,7 @@ anything outside these two jobs), respond:
 "Sorry, I can only help with building your order from the restaurant."
 
 # Menu (JSON)
+All prices are in Saudi Riyals (SR). Always write prices as "SR 12", never "$12".
 {menu.model_dump_json(indent=2)}
 
 # Ingredient rules
