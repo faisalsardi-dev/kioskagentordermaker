@@ -1,0 +1,26 @@
+################################################################################################################################################################################################
+observations (eval round 2):
+
+GOOD / CONFIRMED FIXED:
+1- currency fix holding. cases 1 and 2 show SR everywhere, including model-composed menu tables and price math. the round-1 dollar bug (obs #2) is dead. fix = one prompt line declaring prices are in SR.
+2- out-of-scope refusal is DETERMINISTIC. cases 6 and 7 returned the exact same verbatim string: "Sorry, I can only help with building your order from the restaurant." string-match for FLAG='out_of_scope' is viable on this full sentence.
+3- over-max refusal prefix is STABLE, suffix drifts. cases 4 and 5 both open with "Sorry, the maximum for any ingredient is 5." then improvise an item-specific suggestion. full-string match fails; prefix match (startswith) works. no dedicated refusal tool needed — prefix-match both refusal types.
+4- ingredient deviation logic correct across the board. extra tomato + no mayo (3), double cheese = +1 (8), extra extra extra cheese = default 2 +3 = 5 capped (15). wording (extra/no/Nx) and pricing all correct.
+5- extra cheese pricing correct: SR 1.50 per extra, default already in base. (case 8 verified by hand.)
+6- remove_item path clean. case 10 "two waters, drop one" resolved to one water + sauce.
+7- clear_order path clean. case 13 "add mcroyale, clear everything, just water" resolved to water only.
+8- meal swap mid-order clean. case 11 turn 2 "change to sprite zero" correctly replaced the drink, kept the large meal.
+9- already-at-default no-op correct. case 9 "mcroyale with cheese" did NOT modify cheese (already default), read back as default ingredients.
+10- ambiguous quantity. case 14 "some mcchicken spicy" resolved to a single sandwich rather than asking — acceptable, but a judgment call (it assumed 1).
+
+NEEDS FIX / WATCH:
+- FLAG wiring not yet implemented. decided approach: at insert_readback time, set FLAG='out_of_scope' if reply == the exact out-of-scope sentence; set FLAG='over_max' if reply.startswith("Sorry, the maximum for any ingredient is 5."). pending implementation.
+- case 15 narration ("the default is 2, and you added three extra") is accurate but chattier than needed. minor polish, not a bug.
+- finalize-gate slip from round 1 (case 15 there) deliberately NOT tested this round. still parked. no hard gate exists in run_turn — finalize_order fires unconditionally on tool call; only the prompt restrains it. revisit separately.
+- token cost unaddressed: full menu JSON re-sent every loop iteration (~13.7k prompt tokens on the multi-item case 11/12 turns). parked for later.
+
+observations:
+-all prices are in sar
+-"Sorry, I can only help with building your order from the restaurant." and "Sorry, the maximum for any ingredient is 5."+"whatever suggestion it is making" are deterministc outputs which means they can be string matched to alter the flag boolean in the db
+-defaule + extra mechanism works as designed
+- tool calling works good as per the clear in the prompt the llm is smart enough to digest that
