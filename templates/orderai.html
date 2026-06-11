@@ -35,8 +35,13 @@
             display: flex;
             gap: 0.5rem;
         }
-        form.send input[type="text"] {
+        form.send textarea {
             flex: 1;
+            font: inherit;
+            resize: none;
+        }
+        form.send button {
+            align-self: flex-end;
         }
     </style>
 </head>
@@ -57,9 +62,18 @@
     </div>
 
     <form method="post" action="/orderai/message" class="send">
-        <input type="text" name="message" placeholder="Type your message..." autofocus>
+        <textarea name="message" rows="3" placeholder="Type your message..." autocomplete="off" autofocus></textarea>
         <button type="submit">Send</button>
     </form>
+    <script>
+        // Enter sends (as the old single-line input did); Shift+Enter makes a new line.
+        document.querySelector("form.send textarea").addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+    </script>
 
     <form method="post" action="/orderai/reset" style="margin-top:1rem">
         <button type="submit">Start new conversation</button>
