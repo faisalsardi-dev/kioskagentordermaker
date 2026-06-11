@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>mcmenumimic — Settings</title>
+</head>
+<body>
+    <p><a href="/">&larr; Back to kiosk</a></p>
+    <h1>Settings</h1>
+
+    <div class="panel">
+        <p>Logged in as {{ user.email }}</p>
+        {% if saved %}
+            <p class="error" style="color: green;">Nickname saved.</p>
+        {% endif %}
+        {% if error_message %}
+            <p class="error">{{ error_message }}</p>
+        {% endif %}
+        <form method="post" action="/settings">
+            <p>
+                <label>Nickname<br>
+                    <input type="text" name="nickname" value="{{ nickname | default('') }}" maxlength="80" autocomplete="off" required>
+                </label>
+            </p>
+            <button type="submit">Save</button>
+        </form>
+    </div>
+</body>
+</html>
