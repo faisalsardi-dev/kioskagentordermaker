@@ -284,7 +284,23 @@ def summarize_order_for_customer(order: Order, menu: Menu) -> str:
         elif item.kind == "mccafe":
             lines.append(item.name)
 
-    return "\n".join(lines)
+    # Group identical lines into "Nx ..." counts. Each line string fully
+    # encodes the item (meal size, drink, every ingredient deviation), so
+    # items that differ in any of those — e.g. two meals with different
+    # drinks — produce different strings and won't merge. Order is preserved
+    # by first occurrence; non-adjacent duplicates still collapse.
+    counts: dict[str, int] = {}
+    ordered: list[str] = []
+    for line in lines:
+        if line in counts:
+            counts[line] += 1
+        else:
+            counts[line] = 1
+            ordered.append(line)
+    return "\n".join(
+        f"{counts[line]}x {line}" if counts[line] > 1 else line
+        for line in ordered
+    )
 
 
 def remove_item(order: Order, index: int) -> str:
