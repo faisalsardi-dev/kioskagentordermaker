@@ -316,3 +316,17 @@ def verify_user(email: str, code: str) -> bool:
         return True
     finally:
         conn.close()
+
+
+def set_nickname(email: str, nickname: str) -> bool:
+    """Update the nickname for an existing user. Returns True if a row was updated."""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE users SET nickname = ? WHERE email = ?",
+            (nickname, email),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()

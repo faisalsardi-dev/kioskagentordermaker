@@ -628,6 +628,48 @@ def logout():
     return response
 
 
+@app.get("/settings", response_class=HTMLResponse)
+def settings_get(
+    request: Request,
+    saved: str = "",
+    user: dict | None = Depends(get_current_user),
+):
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(
+        request, "settings.html",
+        {"user": user, "nickname": user["nickname"] or "", "saved": saved},
+    )
+
+
+@app.post("/settings")
+def settings_post(
+    request: Request,
+    nickname: str = Form(...),
+    user: dict | None = Depends(get_current_user),
+):
+    # Identity comes ONLY from the verified auth_token cookie — the form
+    # carries just the nickname, so a user can only ever edit their own row.
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    nickname = nickname.strip()
+
+    def _fail(message: str):
+        return templates.TemplateResponse(
+            request, "settings.html",
+            {"user": user, "nickname": nickname, "error_message": message},
+        )
+
+    if not nickname:
+        return _fail("Nickname can't be empty.")
+    if len(nickname) > 80:
+        return _fail("Nickname is too long (80 characters max).")
+
+    sqlmanager.set_nickname(user["email"], nickname)
+    return RedirectResponse(url="/settings?saved=1", status_code=303)
+
+
 @app.post("/reorder")
 def reorder(
     session_id: str | None = Cookie(default=None),
