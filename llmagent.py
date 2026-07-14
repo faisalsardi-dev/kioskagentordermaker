@@ -2,7 +2,7 @@
 
 Public entry point: run_turn(user_message, history, order, menu) -> (assistant_text, new_history)
 """
-#from openai import RateLimitError
+from openai import OpenAIError
 import json
 import time
 import os
@@ -265,7 +265,26 @@ def run_turn(
     history = history + [HumanMessage(content=user_message)]
 
     for _ in range(max_iterations):
-        response = llm_with_tools.invoke(history)
+        try:
+            response = llm_with_tools.invoke(history)
+        except OpenAIError as e:
+            # Provider-side failure (expired/invalid key, rate limit, out of
+            # credits, network blip, upstream 5xx). Log one clean line for the
+            # server journal and degrade gracefully instead of 500-ing the page.
+            print(f"[orderai] LLM unavailable: {type(e).__name__}: {e}")
+            metrics = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "loop_count": loop_count,
+                "wall_clock_ms": int((time.monotonic() - start) * 1000),
+                "is_readback": False,
+            }
+            return (
+                "⚠️ The order assistant is temporarily unavailable. "
+                "Please try again in a moment — or use the manual kiosk to build your order.",
+                history,
+                metrics,
+            )
         loop_count += 1
         usage = getattr(response, "usage_metadata", None) or {}
         prompt_tokens += usage.get("input_tokens", 0)
