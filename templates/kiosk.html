@@ -10,6 +10,12 @@
 <body>
     <h1>mcmenumimic</h1>
 
+    {% if not user %}
+    <div class="panel" style="background:#eef6ff; border:1px solid #4a90d9;">
+        <p style="margin:0;">🤖 <strong>New:</strong> Sign up to get access to an MCP you give to your LLM agent. <a href="/register">Create an account &rarr;</a></p>
+    </div>
+    {% endif %}
+
     {% if user and last_order_summary %}
     <div class="panel">
         <h2>Welcome back, {{ user.nickname or user.email }}</h2>

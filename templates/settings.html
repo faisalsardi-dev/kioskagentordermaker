@@ -14,7 +14,7 @@
     <div class="panel">
         <p>Logged in as {{ user.email }}</p>
         {% if saved %}
-            <p class="error" style="color: green;">Nickname saved.</p>
+            <p class="error" style="color: green;">Saved.</p>
         {% endif %}
         {% if error_message %}
             <p class="error">{{ error_message }}</p>
@@ -27,6 +27,75 @@
             </p>
             <button type="submit">Save</button>
         </form>
+    </div>
+
+    <div class="panel">
+        <h2>MCP access (for your own AI agent)</h2>
+        <p>
+            Connect your own MCP client (e.g. Claude Code) to build orders with
+            your LLM and get a kiosk pickup code. Auth is a personal bearer token.
+        </p>
+
+        {% if new_token %}
+            <div class="error" style="border:2px solid #b00; padding:0.75em; background:#fff4f4;">
+                <p style="color:#b00;"><strong>⚠️ Copy this token now — it is shown only once.</strong></p>
+                <p>
+                    We store <strong>only a hashed version</strong> on our servers, so we
+                    can never show it to you again. Keeping it safe is your
+                    responsibility. Lost it? Just regenerate below (that invalidates
+                    the old one).
+                </p>
+                <p>Your token:</p>
+                <pre style="white-space:pre-wrap; word-break:break-all; background:#111; color:#0f0; padding:0.5em;">{{ new_token }}</pre>
+                <p>Ready-to-paste setup command:</p>
+                <pre style="white-space:pre-wrap; word-break:break-all; background:#111; color:#eee; padding:0.5em;">{{ mcp_snippet }}</pre>
+            </div>
+            <form method="post" action="/settings/mcp-token/revoke" style="margin-top:0.75em;">
+                <button type="submit">Revoke token</button>
+            </form>
+        {% elif has_mcp_token %}
+            <p>You have an active MCP token. For security the token itself isn't
+               shown again — regenerate if you've lost it.</p>
+            <form method="post" action="/settings/mcp-token" style="display:inline;">
+                <button type="submit">Regenerate token</button>
+            </form>
+            <form method="post" action="/settings/mcp-token/revoke" style="display:inline;">
+                <button type="submit">Revoke token</button>
+            </form>
+        {% else %}
+            <p>You don't have an MCP token yet.</p>
+            <form method="post" action="/settings/mcp-token">
+                <button type="submit">Generate MCP token</button>
+            </form>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h2>MCP activity</h2>
+        {% if mcp_calls %}
+            <table border="1" cellpadding="4" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Time (UTC)</th><th>Tool</th><th>OK</th>
+                        <th>Summary / error</th><th>Code</th><th>Redeemed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in mcp_calls %}
+                    <tr>
+                        <td>{{ c.created_at }}</td>
+                        <td>{{ c.tool }}</td>
+                        <td>{{ '✓' if c.ok else '✗' }}</td>
+                        <td>{{ c.error_or_summary }}</td>
+                        <td>{{ c.code or '—' }}</td>
+                        <td>{{ 'yes' if c.redeemed else 'no' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No MCP activity yet.</p>
+        {% endif %}
     </div>
 </body>
 </html>

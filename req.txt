@@ -8,3 +8,4 @@ langchain
 argon2-cffi
 PyJWT
 resend
+mcp>=1.28,<2

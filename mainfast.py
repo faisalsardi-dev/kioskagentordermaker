@@ -1,7 +1,8 @@
 """FastAPI app: kiosk mimic + AI order builder."""
 #uvicorn mainfast:app --reload
 from pathlib import Path
-import json, uuid, secrets
+import json, uuid, secrets, hashlib
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from totaling import price_order
 from fastapi import FastAPI, Request, HTTPException, Cookie, Response, Form, Depends
@@ -24,15 +25,34 @@ from emailmanager import send_verification_email
 ROOT = Path(__file__).parent
 MENU_PATH = ROOT / "mcmenu.json"
 
+import sqlmanager
+import mcpserver  # builds the MCP app + session manager at import (no circular dep)
+
+# Schema init/migration — all additive and idempotent, so restarts on the live
+# DB are safe and existing rows survive.
+sqlmanager.init_db()
+sqlmanager.init_users_table()
+sqlmanager.init_mcp_table()
+sqlmanager.migrate_users_add_mcp_token()
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # The MCP StreamableHTTP session manager must be running for the /mcp mount
+    # to serve requests.
+    async with mcpserver.mcp.session_manager.run():
+        yield
+
+
 app = FastAPI(
     title="mcmenumimic",
     description="A McDonald's-style self-service kiosk with optional AI order builder.",
+    lifespan=lifespan,
 )
-import sqlmanager
-sqlmanager.init_db()
-sqlmanager.init_users_table()
 
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+# User-facing MCP server (bearer-auth) for registered users' own LLM agents.
+app.mount("/mcp", mcpserver.mounted_app)
 templates = Jinja2Templates(directory=ROOT / "templates")
 
 # Per-session kiosk carts. One Order per browser session, keyed by the
@@ -506,6 +526,9 @@ def redeem(
     for item in pending_order.items:
         cart.items.append(item.model_copy(deep=True))
     sqlmanager.mark_redeemed(code, user_email=user["email"] if user else None)
+    # If this code came from the MCP flow, flip its mcp_calls row too (no-op
+    # for /orderai-origin codes).
+    sqlmanager.mark_mcp_redeemed(code, user["email"] if user else None)
     del PENDING_ORDERS[code]
     response = RedirectResponse(url="/order", status_code=303)
     response.set_cookie("session_id", session_id, max_age=3600, httponly=True)
@@ -628,6 +651,20 @@ def logout():
     return response
 
 
+def _settings_context(user: dict, **extra) -> dict:
+    """Base template context for settings.html. Always includes the MCP token
+    state + recent activity so every render of the page (nickname save, token
+    generate, errors) has what the MCP blocks need."""
+    ctx = {
+        "user": user,
+        "nickname": user["nickname"] or "",
+        "has_mcp_token": bool(user.get("mcp_token_hash")),
+        "mcp_calls": sqlmanager.get_mcp_calls(user["email"], 20),
+    }
+    ctx.update(extra)
+    return ctx
+
+
 @app.get("/settings", response_class=HTMLResponse)
 def settings_get(
     request: Request,
@@ -637,8 +674,7 @@ def settings_get(
     if user is None:
         return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse(
-        request, "settings.html",
-        {"user": user, "nickname": user["nickname"] or "", "saved": saved},
+        request, "settings.html", _settings_context(user, saved=saved),
     )
 
 
@@ -658,7 +694,7 @@ def settings_post(
     def _fail(message: str):
         return templates.TemplateResponse(
             request, "settings.html",
-            {"user": user, "nickname": nickname, "error_message": message},
+            _settings_context(user, nickname=nickname, error_message=message),
         )
 
     if not nickname:
@@ -667,6 +703,50 @@ def settings_post(
         return _fail("Nickname is too long (80 characters max).")
 
     sqlmanager.set_nickname(user["email"], nickname)
+    return RedirectResponse(url="/settings?saved=1", status_code=303)
+
+
+@app.post("/settings/mcp-token", response_class=HTMLResponse)
+def settings_mcp_token_post(
+    request: Request,
+    user: dict | None = Depends(get_current_user),
+):
+    """Generate (or regenerate) the user's MCP bearer token.
+
+    We store only the sha256 hash; the plaintext token is shown exactly ONCE on
+    this response and can never be retrieved again — only regenerated (which
+    invalidates the old one).
+    """
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    sqlmanager.set_mcp_token_hash(user["email"], token_hash)
+    user = sqlmanager.get_user(user["email"])  # refetch so has_mcp_token is True
+
+    # Build the base URL honouring nginx's X-Forwarded-Proto (else it'd read as
+    # http behind the proxy and produce a wrong snippet).
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("host", request.url.netloc)
+    snippet = (
+        f'claude mcp add --transport http kiosk {proto}://{host}/mcp '
+        f'--header "Authorization: Bearer {token}"'
+    )
+    return templates.TemplateResponse(
+        request, "settings.html",
+        _settings_context(user, new_token=token, mcp_snippet=snippet),
+    )
+
+
+@app.post("/settings/mcp-token/revoke")
+def settings_mcp_token_revoke(
+    user: dict | None = Depends(get_current_user),
+):
+    """Revoke MCP access by NULLing the stored hash."""
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+    sqlmanager.set_mcp_token_hash(user["email"], None)
     return RedirectResponse(url="/settings?saved=1", status_code=303)
 
 

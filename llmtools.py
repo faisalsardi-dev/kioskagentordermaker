@@ -24,6 +24,11 @@ import time
 # Key: 4-hex code. Value: (Order, expires_at_epoch_seconds).
 PENDING_ORDERS: dict[str, tuple["Order", float]] = {}
 
+# One live MCP code per user. Key: user_email. Value: the code currently in
+# PENDING_ORDERS for that user. Stale mappings are harmless — the check against
+# PENDING_ORDERS is what actually decides if a user is "busy" (see mcpserver).
+MCP_PENDING: dict[str, str] = {}
+
 CODE_TTL_SECONDS = 60
 
 

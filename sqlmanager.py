@@ -330,3 +330,169 @@ def set_nickname(email: str, nickname: str) -> bool:
         return cur.rowcount > 0
     finally:
         conn.close()
+
+
+# ============================================================================
+# MCP layer: per-user bearer tokens + one row per MCP tool call.
+#
+# The MCP server (mcpserver.py) is a second front door for registered users to
+# build orders with their own LLM. It reuses the code-redemption bridge but has
+# its OWN analytics table (mcp_calls) — it never writes to `orders` and never
+# calls stamp_code(). Auth is a per-user static bearer token; we store only its
+# sha256 hex in users.mcp_token_hash (NULL = no MCP access).
+# ============================================================================
+
+
+def init_mcp_table() -> None:
+    """Create the mcp_calls table if it doesn't exist. Safe to call on startup.
+
+    One row per MCP tool call (view_menu or place_order). `code` is set only on
+    a successful place_order; `redeemed` flips to 1 when that code is plugged in
+    at the kiosk (mark_mcp_redeemed).
+    """
+    conn = get_connection()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mcp_calls (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at        TEXT    NOT NULL,
+                user_email        TEXT    NOT NULL,
+                tool              TEXT    NOT NULL,
+                args_json         TEXT,
+                ok                INTEGER NOT NULL,
+                error_or_summary  TEXT,
+                code              TEXT,
+                wall_clock_ms     INTEGER,
+                redeemed          INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def migrate_users_add_mcp_token() -> None:
+    """Add users.mcp_token_hash if missing. Idempotent — safe on every startup.
+
+    SQLite has no 'ADD COLUMN IF NOT EXISTS', so we probe PRAGMA table_info
+    first; a bare ALTER would raise on the second run and crash the droplet.
+    """
+    conn = get_connection()
+    try:
+        cols = [row["name"] for row in conn.execute("PRAGMA table_info(users)")]
+        if "mcp_token_hash" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN mcp_token_hash TEXT")
+            conn.commit()
+    finally:
+        conn.close()
+
+
+def set_mcp_token_hash(email: str, token_hash: str | None) -> bool:
+    """Set (or clear) a user's MCP token hash. Pass None to revoke.
+
+    Returns True if a row was updated. Regenerating overwrites the old hash,
+    which invalidates the previous token.
+    """
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE users SET mcp_token_hash = ? WHERE email = ?",
+            (token_hash, email),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def get_user_by_mcp_token_hash(token_hash: str) -> dict | None:
+    """Look up a user by their MCP token hash. Returns the row dict, or None.
+
+    NULL hashes never match (SQLite '= NULL' is never true), so revoked or
+    never-provisioned users can't authenticate.
+    """
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM users WHERE mcp_token_hash = ?",
+            (token_hash,),
+        ).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
+def insert_mcp_call(
+    user_email: str,
+    tool: str,
+    args_json: str | None,
+    ok: int,
+    error_or_summary: str | None,
+    code: str | None,
+    wall_clock_ms: int | None,
+) -> int:
+    """Write one mcp_calls row. Returns the new row id."""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            """
+            INSERT INTO mcp_calls (
+                created_at, user_email, tool, args_json, ok,
+                error_or_summary, code, wall_clock_ms, redeemed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+            """,
+            (
+                _now_iso(),
+                user_email,
+                tool,
+                args_json,
+                ok,
+                error_or_summary,
+                code,
+                wall_clock_ms,
+            ),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def get_mcp_calls(email: str, limit: int = 20) -> list[dict]:
+    """Return this user's most recent MCP tool calls, newest first."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM mcp_calls
+            WHERE user_email = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (email, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def mark_mcp_redeemed(code: str, user_email: str | None = None) -> bool:
+    """Flip redeemed=1 on the mcp_calls row carrying this code.
+
+    Matches on the (unique) code; user_email is accepted for signature parity
+    with mark_redeemed but isn't needed to find the row. No-op if no MCP row
+    holds the code (e.g. the code came from the /orderai flow). Returns True if
+    a row was updated.
+    """
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE mcp_calls SET redeemed = 1 WHERE code = ?",
+            (code,),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
