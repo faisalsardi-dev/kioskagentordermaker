@@ -730,7 +730,7 @@ def settings_mcp_token_post(
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
     host = request.headers.get("host", request.url.netloc)
     snippet = (
-        f'claude mcp add --transport http kiosk {proto}://{host}/mcp '
+        f'claude mcp add --transport http kiosk {proto}://{host}/mcp/ '
         f'--header "Authorization: Bearer {token}"'
     )
     return templates.TemplateResponse(
