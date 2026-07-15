@@ -18,6 +18,7 @@ itself and talks to llmtools / sqlmanager / totaling / datapydentic.
 
 import hashlib
 import json
+import os
 import time
 from contextvars import ContextVar
 from pathlib import Path
@@ -25,6 +26,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field, TypeAdapter
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 import llmtools
 import sqlmanager
@@ -159,9 +161,26 @@ def pending_code_for_user(email: str) -> tuple[str, int] | None:
 
 # ---------- the MCP server + tools ----------
 
+# The SDK enables DNS-rebinding protection by default and, when the server host
+# is localhost, auto-allows ONLY localhost Host headers. Behind nginx the Host is
+# the public domain, so without this every proxied request is rejected with
+# 421 "Invalid Host header". Allow the prod domain (override via MCP_ALLOWED_HOST)
+# plus localhost for local smoke tests. A missing Origin is allowed by the SDK,
+# so non-browser clients (e.g. Claude Code) are unaffected.
+_HOST = os.getenv("MCP_ALLOWED_HOST", "orderbuilder.tech")
+_SECURITY = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=[_HOST, f"www.{_HOST}", "127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_origins=[f"https://{_HOST}", f"https://www.{_HOST}",
+                     "http://127.0.0.1:*", "http://localhost:*"],
+)
+
 # streamable_http_path="/" so mounting at "/mcp" in FastAPI yields the endpoint
 # at exactly /mcp (the default "/mcp" here would double to /mcp/mcp).
-mcp = FastMCP("kiosk", stateless_http=True, streamable_http_path="/")
+mcp = FastMCP(
+    "kiosk", stateless_http=True, streamable_http_path="/",
+    transport_security=_SECURITY,
+)
 
 
 @mcp.tool()
